@@ -1090,7 +1090,42 @@ async function handle(text) {
   const isSimpleSkill = ['météo','quel temps','quelle heure','quel jour','mon mrr','mes priorités','mes rappels','compte à rebours thaï','stoïque du jour','que sais-tu faire']
     .some(p => tlow0.includes(p));
 
+  // Note action enrichie : "prends note", "Sly note ça", "note ça"
+  const isNoteSimple = /^(sly\s+)?(prends?\s+note|notes?\s+(ça|ca|moi)|note\s*[:,])/i.test(tlow0) ||
+                       tlow0.startsWith('prends note') || tlow0.startsWith('note dans sly notes');
   const isExplicitAction = isOpenAction || isNoteAction || isWorkflowAction || isMusicAction;
+
+  // Note dans Sly notes — gérer ici, pas via intent (skip confirmation)
+  if (isNoteSimple) {
+    let noteContent = text;
+    // Strip le trigger
+    const stripTriggers = ['sly prends note', 'prends note de', 'prends note', 'sly note ça', 'sly note ca', 'note ça', 'note ca', 'note moi', 'note:', 'note :'];
+    for (const tr of stripTriggers) {
+      if (tlow0.startsWith(tr)) { noteContent = text.substring(tr.length).trim().replace(/^[:,.]\s*/, ''); break; }
+    }
+    if (noteContent.length < 3) noteContent = text;
+    try {
+      const r = await fetch('/api/skill/note_today', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'[Sly notes] '+noteContent}),signal:AbortSignal.timeout(8000)}).then(x => x.json());
+      // Mirror local au cas où
+      try {
+        const arr = JSON.parse(localStorage.getItem('sly_notes_local') || '[]');
+        arr.push({ts:new Date().toISOString(), text:noteContent});
+        localStorage.setItem('sly_notes_local', JSON.stringify(arr.slice(-200)));
+      } catch(_){}
+      const path = r && r.path ? r.path.replace(/.*WORKSPACE AICO[\\/]/i,'').replace(/\\/g,'/') : 'memory/notes';
+      const reply = `Note prise Augustin. Sauvée dans ${path}.`;
+      showAI(reply); await speak(reply); return;
+    } catch(e) {
+      // Bridge down → mirror local seulement
+      try {
+        const arr = JSON.parse(localStorage.getItem('sly_notes_local') || '[]');
+        arr.push({ts:new Date().toISOString(), text:noteContent});
+        localStorage.setItem('sly_notes_local', JSON.stringify(arr.slice(-200)));
+      } catch(_){}
+      const reply = "Note gardée en local Augustin (bridge offline).";
+      showAI(reply); await speak(reply); return;
+    }
+  }
 
   // Confirmation pour TOUTE action qui touche au PC (Augustin 03/05 : sécurité absolue)
   const needsConfirm = isOpenAction || isMusicAction || isWorkflowAction;
@@ -2115,18 +2150,24 @@ if (greet) (async () => {
   let greetText = null;
   try { greetText = await _proactiveBriefing(); } catch(_){}
   if (!greetText) greetText = pool[Math.floor(Math.random() * pool.length)];
-  showAI(greetText, '— Sly');
-  setTimeout(async () => {
-    try { await speak(greetText); }
-    catch(e) {
-      aiAttr.textContent = '↳ tape pour activer la voix';
-      aiAttr.classList.add('visible');
-      const retry = () => { aiAttr.textContent = '— Sly'; speak(greetText); };
-      ['pointerdown','click','touchstart','keydown'].forEach(ev =>
-        document.addEventListener(ev, retry, { once: true, capture: true, passive: true })
-      );
-    }
-  }, 300);
+  showAI(greetText, '↳ tape n\'importe où pour activer la voix');
+  // En mobile iOS, le 1er audio nécessite un user gesture. On attend ce gesture AVANT speak.
+  let _greetSpoken = false;
+  const _doGreetSpeak = () => {
+    if (_greetSpoken) return;
+    _greetSpoken = true;
+    aiAttr.textContent = '— Sly';
+    speak(greetText);
+  };
+  // Tente quand même direct (au cas où ça marche)
+  setTimeout(() => {
+    if (_greetSpoken) return;
+    speak(greetText).then(() => { _greetSpoken = true; aiAttr.textContent = '— Sly'; }).catch(() => {});
+  }, 400);
+  // Retry sur le 1er user gesture
+  ['pointerdown','click','touchstart','keydown'].forEach(ev =>
+    document.addEventListener(ev, _doGreetSpeak, { once: true, capture: true, passive: true })
+  );
 })();
 
 if (listenMode) {
