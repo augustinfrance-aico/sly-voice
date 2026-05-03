@@ -2089,7 +2089,7 @@ async function _proactiveBriefing() {
   } catch(_) { return null; }
 }
 
-if (greet) {
+if (greet) (async () => {
   const h = new Date().getHours();
   const isMorning = h < 12, isAfternoon = h >= 12 && h < 18, isEvening = h >= 18 && h < 23, isNight = h >= 23 || h < 6;
   const greetMorning = [
@@ -2141,7 +2141,7 @@ if (greet) {
       );
     }
   }, 300);
-}
+})();
 
 if (listenMode) {
   document.addEventListener('click', () => setTimeout(startListen, 600), { once: true });
