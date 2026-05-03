@@ -294,6 +294,24 @@ body.travel-evening::before{box-shadow:inset 0 0 100px 14px rgba(122,60,255,0.12
 </head>
 <body>
 
+<!-- DEBUG OVERLAY — visible sur iPhone, montre les logs en direct -->
+<div id="debugOverlay" style="position:fixed;bottom:200px;left:8px;right:8px;max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.85);border:1px solid #00E5FF;border-radius:8px;padding:8px;font-family:monospace;font-size:10px;color:#00FF41;z-index:9000;display:none;line-height:1.3"></div>
+
+<script>
+window._slyDebug = function(msg) {
+  try {
+    const d = document.getElementById('debugOverlay');
+    if (!d) return;
+    d.style.display = 'block';
+    const time = new Date().toTimeString().slice(0,8);
+    d.innerHTML += '<div>[' + time + '] ' + msg + '</div>';
+    d.scrollTop = d.scrollHeight;
+  } catch(_){}
+};
+window._slyDebug('Page loaded');
+window.addEventListener('error', e => window._slyDebug('JS ERROR: ' + e.message + ' @' + e.filename + ':' + e.lineno));
+</script>
+
 <div id="sly-title">S L Y</div>
 
 <div class="topbar">
@@ -691,6 +709,7 @@ function _budgetPct() {
 
 async function speak(text) {
   if (!text) { setState('idle'); return; }
+  if (window._slyDebug) window._slyDebug('speak() called: ' + text.slice(0, 40));
   // Bloqueur 5€/mois : si dépassement, fallback voix navigateur (gratuit)
   if (!_budgetOk(text.length)) {
     console.warn('[sly][BUDGET] cap atteint — fallback Web Speech');
@@ -715,6 +734,7 @@ async function speak(text) {
   const voiceCfg = VOICES[Settings.voice] || VOICES.bond;
   let resp;
   try {
+    if (window._slyDebug) window._slyDebug('fetching ElevenLabs...');
     resp = await fetch(
       'https://api.elevenlabs.io/v1/text-to-speech/' + voiceCfg.id + '/stream?optimize_streaming_latency=4&output_format=mp3_44100_128',
       {
@@ -728,7 +748,9 @@ async function speak(text) {
       }
     );
     if (resp.ok) _addUsage(text.length);
+    if (window._slyDebug) window._slyDebug('ElevenLabs HTTP ' + resp.status);
   } catch(e) {
+    if (window._slyDebug) window._slyDebug('FETCH ERR: ' + e.message);
     console.error('[sly] eleven fetch err:', e.message);
     showAI('Connexion ElevenLabs perdue.');
     setState('idle');
@@ -762,15 +784,17 @@ async function speak(text) {
     _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); };
     try {
       await _slyAudio.play();
+      if (window._slyDebug) window._slyDebug('audio.play() OK ✓');
     } catch(playErr) {
       console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
+      if (window._slyDebug) window._slyDebug('play() REJECTED: ' + playErr.message);
       URL.revokeObjectURL(url);
-      // Fallback Web Speech (gratuit, marche partout)
       try {
         const u = new SpeechSynthesisUtterance(text);
         u.lang = 'fr-FR'; u.rate = 1.0;
         u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
         window.speechSynthesis.speak(u);
+        if (window._slyDebug) window._slyDebug('Web Speech fallback launched');
       } catch(_) { setState('idle'); }
       return;
     }
@@ -1677,6 +1701,7 @@ let _continuTimer = null;
 let _continuIndex = 0;
 async function _continuFire() {
   console.log('[sly][continu] fire — mode=' + continuMode + ' state=' + state);
+  if (window._slyDebug) window._slyDebug('_continuFire called, state=' + state);
   if (!continuMode) return;
   // Si Sly est en train de parler/écouter, retry plus court (était 30s c'est trop)
   if (state === 'speaking' || state === 'listening' || state === 'thinking') {
@@ -1697,6 +1722,7 @@ function toggleContinu() {
   const b = $('continuBtn');
   const skip = $('skipBtn');
   console.log('[sly][continu] toggle → ' + continuMode);
+  if (window._slyDebug) window._slyDebug('CONTINU clicked, mode=' + continuMode);
   if (continuMode) {
     if (b) b.classList.add('active');
     if (skip) skip.style.display = '';
