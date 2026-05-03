@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>SLY VOICE — Assistant Vocal</title>
+<script>
+// PURGE SW + CACHE — empêche un old HTML cassé d'être servi (Augustin 03/05)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+}
+if (window.caches) {
+  caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
+}
+</script>
 <meta name="theme-color" content="#1F6FFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
