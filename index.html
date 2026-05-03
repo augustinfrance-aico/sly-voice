@@ -1398,6 +1398,12 @@ async function detectClient(text) {
 let _conversationMode = false;
 
 micBtn.addEventListener('click', () => {
+  console.log('[sly][mic] clicked, state=' + state + ' conv=' + _conversationMode);
+  // Unlock audio iOS DANS le user gesture (au cas où)
+  try {
+    if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
+    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+  } catch(_){}
   if (_conversationMode) {
     // Termine la conversation
     _conversationMode = false;
@@ -1435,13 +1441,22 @@ document.addEventListener('keydown', (e) => {
 // RITUEL
 // ═══════════════════════════════════════════════════════════
 $('ritualBtn').addEventListener('click', async () => {
+  console.log('[sly][rituel] clicked');
+  // Unlock audio iOS DANS le user gesture
+  try {
+    if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
+    _slyAudio.muted = true;
+    _slyAudio.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEyLjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgIAAAAAAAAAA';
+    _slyAudio.play().then(() => { _slyAudio.pause(); _slyAudio.currentTime = 0; _slyAudio.muted = false; _audioUnlocked = true; }).catch(()=>{});
+    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+  } catch(_){}
   const h = new Date().getHours();
   const isMorning = h < 14;
   const txt = isMorning
     ? "Bonjour Augustin. Quelle est l'intention de ta journée ?"
     : "Bonsoir Augustin. Quel moment t'a marqué aujourd'hui ?";
   showAI(txt);
-  await speak(txt);
+  setTimeout(() => speak(txt), 200);
 });
 
 // ═══════════════════════════════════════════════════════════
