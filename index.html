@@ -1,0 +1,2399 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>SLY VOICE — Assistant Vocal</title>
+<meta name="theme-color" content="#1F6FFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sly">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/sly_icon_180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/sly_icon_180.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#05070A;--card:#0D1117;--card2:#111820;
+  --blue:#1F6FFF;--violet:#7A3CFF;--cyan:#00E5FF;--green:#1EFF8E;--gold:#FFD700;--red:#FF3B5C;
+  --text:#E8ECF4;--text2:#8B95A8;--text3:#4A5468;
+  --border:rgba(255,255,255,0.07);
+}
+html{background:var(--bg) !important;height:100%;height:-webkit-fill-available;height:100dvh}
+html,body{min-height:100vh;min-height:100dvh;min-height:-webkit-fill-available;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','SF Pro Display',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+body{position:fixed;inset:0;background:var(--bg) !important}
+@supports (-webkit-touch-callout:none){
+  html,body{min-height:-webkit-fill-available}
+}
+
+/* ═══ 10 THÈMES — selector dans Réglages ═══ */
+body[data-theme="neural"]{--bg:#05070A;--blue:#1F6FFF;--cyan:#00E5FF;--violet:#7A3CFF;--green:#1EFF8E;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="red-strike"]{--bg:#0A0303;--blue:#FF1F1F;--cyan:#FF6B6B;--violet:#FF3838;--green:#FFB347;--gold:#FFD700;--red:#FF0040}
+body[data-theme="neon-green"]{--bg:#020A05;--blue:#1EFF8E;--cyan:#5DFFB0;--violet:#1EFFB6;--green:#00FF6E;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="royal-purple"]{--bg:#0A0514;--blue:#9D4EDD;--cyan:#C77DFF;--violet:#7B2CBF;--green:#80FFDB;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="golden"]{--bg:#0A0905;--blue:#FFD700;--cyan:#FFE66D;--violet:#FFAA00;--green:#FFCC33;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="pure-cyan"]{--bg:#020A0A;--blue:#00E5FF;--cyan:#00FFFF;--violet:#00B8FF;--green:#00FFCC;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="monochrome"]{--bg:#0A0A0A;--blue:#FFFFFF;--cyan:#CCCCCC;--violet:#999999;--green:#EEEEEE;--gold:#FFFFFF;--red:#FF3B5C}
+body[data-theme="sunset"]{--bg:#0A0508;--blue:#FF6B6B;--cyan:#FFAA88;--violet:#C73E5F;--green:#FFD93D;--gold:#FFA500;--red:#FF3B5C}
+body[data-theme="ocean"]{--bg:#020812;--blue:#0077B6;--cyan:#00B4D8;--violet:#1E88E5;--green:#48CAE4;--gold:#FFD700;--red:#FF3B5C}
+body[data-theme="hacker"]{--bg:#000000;--blue:#00FF41;--cyan:#39FF14;--violet:#00FF7F;--green:#00FF41;--gold:#FFFF00;--red:#FF0000}
+
+/* Background ciel étoilé */
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  box-shadow:inset 0 0 80px 12px rgba(31,111,255,0.10);
+  transition:box-shadow .8s;animation:edgeBreath 6s ease-in-out infinite}
+body.speaking-state::before{box-shadow:inset 0 0 120px 18px rgba(0,229,255,0.18);animation:edgeBreath 1.4s ease-in-out infinite}
+body.listening-state::before{box-shadow:inset 0 0 110px 16px rgba(30,255,142,0.16);animation:edgeBreath 1s ease-in-out infinite}
+body.thinking-state::before{box-shadow:inset 0 0 100px 14px rgba(122,60,255,0.14)}
+@keyframes edgeBreath{0%,100%{opacity:0.6}50%{opacity:1}}
+
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(1px 1px at 22% 42%,rgba(0,229,255,.9) 100%,transparent),
+  radial-gradient(1px 1px at 67% 29%,rgba(122,60,255,.85) 100%,transparent),
+  radial-gradient(1.5px 1.5px at 39% 67%,rgba(255,255,255,.7) 100%,transparent),
+  radial-gradient(1px 1px at 84% 72%,rgba(30,255,142,.6) 100%,transparent),
+  radial-gradient(1px 1px at 12% 78%,rgba(255,255,255,.55) 100%,transparent),
+  radial-gradient(1.5px 1.5px at 91% 14%,rgba(0,229,255,.7) 100%,transparent);
+  animation:starsDrift 25s linear infinite}
+@keyframes starsDrift{0%{transform:translate(0,0)}100%{transform:translate(-30px,20px)}}
+
+/* TOPBAR */
+.topbar{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(56px + env(safe-area-inset-right,0px));display:flex;gap:10px;align-items:center;z-index:10;pointer-events:none}
+.topbar > *{pointer-events:auto}
+.gear-btn{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:.2s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.gear-btn:hover{background:rgba(31,111,255,.12);border-color:var(--blue);color:var(--text)}
+.gear-btn:active{transform:scale(.92)}
+#sly-title{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:24px;font-family:'Orbitron','JetBrains Mono',monospace;font-size:14px;letter-spacing:.45em;color:var(--cyan);z-index:9;text-shadow:0 0 14px rgba(0,229,255,.5)}
+
+/* CENTER LOGO */
+.center-hub{position:fixed;top:24%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5;pointer-events:none}
+.logo-wrap{position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center}
+.logo-img{display:block;width:96px;height:96px;object-fit:cover;border-radius:50%;position:relative;z-index:5;animation:slyBreathe 3.4s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(0,229,255,0.55)) drop-shadow(0 0 28px rgba(31,111,255,0.45));clip-path:circle(46% at 50% 50%);background:radial-gradient(circle,#1a2030,#0D1117)}
+.logo-img.speaking{filter:drop-shadow(0 0 22px rgba(0,229,255,1)) drop-shadow(0 0 44px rgba(31,111,255,0.7)) brightness(1.15)}
+.logo-img.thinking{filter:drop-shadow(0 0 18px rgba(122,60,255,0.85)) drop-shadow(0 0 34px rgba(31,111,255,0.55))}
+.logo-img.listening{filter:drop-shadow(0 0 20px rgba(0,229,255,0.95)) drop-shadow(0 0 38px rgba(0,229,255,0.55))}
+@keyframes slyBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+.logo-wrap::before{content:'';position:absolute;inset:-30px;border-radius:50%;
+  background:radial-gradient(circle at center,transparent 38%,rgba(31,111,255,0.32) 56%,rgba(0,229,255,0.16) 72%,transparent 90%);
+  filter:blur(6px);z-index:1;animation:slyHalo 3.8s ease-in-out infinite}
+.logo-wrap::after{content:'';position:absolute;inset:6px;border-radius:50%;
+  border:1px solid rgba(0,229,255,0.30);z-index:2;
+  box-shadow:0 0 18px rgba(0,229,255,0.18);
+  animation:slyRing 4.2s ease-in-out infinite}
+@keyframes slyHalo{0%,100%{opacity:0.55;transform:scale(1)}50%{opacity:0.9;transform:scale(1.08)}}
+@keyframes slyRing{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.06);opacity:0.85}}
+body.listening-state .logo-wrap::after{border-color:rgba(30,255,142,0.7);box-shadow:0 0 22px rgba(30,255,142,0.35)}
+body.thinking-state .logo-wrap::after{border-color:rgba(122,60,255,0.7);box-shadow:0 0 22px rgba(122,60,255,0.4)}
+body.speaking-state .logo-wrap::after{border-color:rgba(0,229,255,0.85);box-shadow:0 0 28px rgba(0,229,255,0.5);animation:slyRing 1.8s ease-in-out infinite}
+body.speaking-state .logo-wrap::before{animation:slyHalo 1.6s ease-in-out infinite}
+
+/* Particules en orbite */
+.orbit-dot{position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px rgba(0,229,255,0.9);transform-origin:0 0;z-index:3;pointer-events:none;opacity:0}
+.orbit-dot:nth-child(1){background:#00E5FF;animation:orbFade 1.2s 1.8s forwards,orbit1 14s linear infinite}
+.orbit-dot:nth-child(2){background:#7A3CFF;box-shadow:0 0 8px rgba(122,60,255,0.9);animation:orbFade 1.2s 2.1s forwards,orbit2 18s linear infinite reverse}
+.orbit-dot:nth-child(3){background:#00E5FF;animation:orbFade 1.2s 2.4s forwards,orbit3 22s linear infinite}
+.orbit-dot:nth-child(4){background:#1EFF8E;box-shadow:0 0 8px rgba(30,255,142,0.6);animation:orbFade 1.2s 2.7s forwards,orbit4 16s linear infinite reverse}
+@keyframes orbFade{to{opacity:.85}}
+@keyframes orbit1{from{transform:rotate(0deg) translateX(95px) rotate(0deg)}to{transform:rotate(360deg) translateX(95px) rotate(-360deg)}}
+@keyframes orbit2{from{transform:rotate(60deg) translateX(82px) rotate(-60deg)}to{transform:rotate(420deg) translateX(82px) rotate(-420deg)}}
+@keyframes orbit3{from{transform:rotate(180deg) translateX(105px) rotate(-180deg)}to{transform:rotate(540deg) translateX(105px) rotate(-540deg)}}
+@keyframes orbit4{from{transform:rotate(270deg) translateX(75px) rotate(-270deg)}to{transform:rotate(630deg) translateX(75px) rotate(-630deg)}}
+
+/* Status */
+.status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:all .3s}
+.status-dot.listening{background:var(--green);box-shadow:0 0 10px var(--green)}
+.status-dot.thinking{background:var(--violet);box-shadow:0 0 10px var(--violet);animation:pulse 1s infinite}
+.status-dot.speaking{background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* TRANSCRIPT — bulle encadrée */
+.transcript{position:fixed;top:46%;left:50%;transform:translateX(-50%);width:90%;max-width:780px;text-align:center;z-index:5;pointer-events:none;padding:0 16px}
+.transcript-box{background:rgba(13,17,23,0.62);border:1px solid rgba(0,229,255,0.22);border-radius:18px;padding:18px 22px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 12px 40px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.04);transition:opacity .4s,border-color .4s;opacity:0}
+.transcript-box.visible{opacity:1}
+body.speaking-state .transcript-box{border-color:rgba(0,229,255,0.45);box-shadow:0 12px 40px rgba(0,229,255,0.18),inset 0 1px 0 rgba(255,255,255,0.04)}
+body.listening-state .transcript-box{border-color:rgba(30,255,142,0.4)}
+.user-text{font-size:13px;color:var(--text3);font-style:italic;margin-bottom:10px;opacity:0;transition:opacity .4s;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;min-height:0;display:none}
+.user-text.visible{display:block;opacity:1}
+.ai-text{font-size:18px;font-weight:500;color:var(--text);line-height:1.55;letter-spacing:.3px;min-height:30px}
+.ai-attr{font-size:10px;color:var(--text3);margin-top:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;opacity:0;transition:opacity .5s}
+.visible{opacity:1!important}
+
+/* DYNAMIC ISLAND */
+.dynamic-island{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-80px);background:#000;color:#fff;border-radius:24px;padding:8px 18px;display:flex;align-items:center;gap:10px;z-index:50;font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;box-shadow:0 6px 22px rgba(0,229,255,0.25);transition:transform .35s cubic-bezier(.2,.9,.2,1);pointer-events:none;border:1px solid rgba(0,229,255,0.3)}
+.dynamic-island.active{transform:translateX(-50%) translateY(calc(env(safe-area-inset-top,0px) + 4px))}
+.di-dot{width:8px;height:8px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;animation:diPulse 1s ease-in-out infinite}
+@keyframes diPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.4);opacity:1}}
+
+/* WAVE BOND */
+.bond-wave{position:fixed;top:50%;left:0;right:0;height:3px;pointer-events:none;z-index:4;opacity:0;transition:opacity .4s}
+body.speaking-state .bond-wave{opacity:.55}
+.bond-wave svg{width:100%;height:100%;display:block}
+.bond-wave path{stroke:#00E5FF;stroke-width:1.2;fill:none;filter:drop-shadow(0 0 4px rgba(0,229,255,0.8))}
+
+/* WHISPER BADGE */
+.whisper-badge{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:6px 14px;border-radius:14px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:2px;display:none;z-index:50}
+body.whisper-mode .whisper-badge{display:block}
+
+/* NIGHT MODE */
+body.night-mode{filter:brightness(0.85) sepia(0.15) hue-rotate(-25deg) saturate(0.85)}
+
+/* TACTICAL */
+body.tactical-mode .topbar,body.tactical-mode #sly-title,body.tactical-mode .bottom-bar > .controls,body.tactical-mode .hint,body.tactical-mode .transcript,body.tactical-mode .center-hub{opacity:0;pointer-events:none;transition:opacity .4s}
+
+/* BOTTOM BAR */
+.bottom-bar{position:fixed;bottom:calc(32px + env(safe-area-inset-bottom,0px));left:0;right:0;z-index:10;display:flex;justify-content:center;align-items:center;gap:18px;padding:0 16px;opacity:0;animation:fi .5s 1.5s forwards;pointer-events:none}
+.bottom-bar > *{pointer-events:auto}
+@keyframes fi{to{opacity:1}}
+
+.mic-btn{position:relative;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#ff6b6b 0%,#e42020 45%,#a00d0d 100%);border:2px solid #320404;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .08s,box-shadow .15s,filter .15s;flex-shrink:0;box-shadow:0 4px 0 #4a0606,0 7px 18px rgba(255,30,30,.4),inset 0 2px 3px rgba(255,255,255,.45),inset 0 -3px 6px rgba(0,0,0,.4);touch-action:manipulation}
+.mic-btn:hover{filter:brightness(1.08)}
+.mic-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #4a0606,0 2px 6px rgba(255,30,30,.35)}
+.mic-btn .mb-dot{width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9)}
+/* Mic = TOUJOURS rouge (Augustin 03/05) — change uniquement quand user clique pour écouter */
+.mic-btn.user-listening{background:linear-gradient(180deg,#1EFF8E 0%,#0fa05a 100%);border-color:#5dffb0;animation:mic-glow 1.5s ease-in-out infinite}
+@keyframes mic-glow{0%,100%{box-shadow:0 0 25px rgba(30,255,142,.4)}50%{box-shadow:0 0 45px rgba(30,255,142,.7)}}
+
+.controls{display:flex;gap:0;align-items:center;justify-content:center;flex:0 0 auto;pointer-events:none}
+.controls.left{padding-right:6px}
+.controls.right{padding-left:6px}
+.ctrl{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text2);padding:12px 20px;border-radius:22px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:.5px;transition:all .25s;-webkit-tap-highlight-color:transparent;white-space:nowrap;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:auto;touch-action:manipulation;font-weight:500}
+.ctrl:hover{background:rgba(31,111,255,.12);border-color:var(--blue);color:var(--text)}
+.ctrl:active{transform:scale(.95);background:rgba(31,111,255,.18)}
+.ctrl.active{background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.45);color:var(--gold)}
+
+.hint{position:fixed;bottom:calc(125px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;opacity:0;animation:fi .5s 2.5s forwards;z-index:5;text-align:center;width:90%;max-width:520px}
+.hint kbd{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;font-size:9px}
+
+/* OUTILS PANEL */
+.tools-panel{position:fixed;top:0;right:-420px;width:400px;max-width:100%;height:100vh;background:#0A0E14;border-left:1px solid rgba(0,229,255,.18);z-index:200;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.2,.9,.2,1);box-shadow:-12px 0 40px rgba(0,0,0,.5);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.tools-panel.open{right:0}
+.tools-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.tools-title{font-family:'Orbitron','JetBrains Mono',monospace;font-size:13px;letter-spacing:.32em;color:#00E5FF}
+.tools-close{background:transparent;border:none;color:var(--text2);font-size:28px;cursor:pointer;padding:0 6px;-webkit-tap-highlight-color:transparent}
+.tools-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:16px;overflow-y:auto;flex:1}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;color:var(--text);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;min-height:88px;touch-action:manipulation}
+.tool:hover{background:rgba(31,111,255,.1);border-color:var(--blue);transform:translateY(-1px)}
+.tool:active{transform:scale(.97)}
+.tool-emoji{font-size:24px}
+.tool-label{font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.4px;color:var(--text2);text-align:center;line-height:1.3}
+.tools-result{padding:14px 18px;border-top:1px solid rgba(255,255,255,.06);max-height:40vh;overflow-y:auto;font-size:12px;line-height:1.5;color:var(--text);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}
+.tools-result:empty{display:none}
+@media (max-width:520px){.tools-panel{width:100%;right:-100%}.tools-panel.open{right:0}}
+
+/* SETTINGS PANEL */
+.settings-panel{position:fixed;top:0;right:-440px;width:420px;max-width:100%;height:100vh;background:#0A0E14;border-left:1px solid var(--border);z-index:201;display:flex;flex-direction:column;transition:right .3s;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.settings-panel.open{right:0}
+.settings-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.settings-title{font-family:'Orbitron','JetBrains Mono',monospace;font-size:13px;letter-spacing:.32em;color:var(--cyan)}
+.settings-close{background:transparent;border:none;color:var(--text2);font-size:28px;cursor:pointer;padding:0 6px}
+.settings-body{flex:1;overflow-y:auto;padding:18px 20px}
+.setting{margin-bottom:18px}
+.setting label{display:block;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;color:var(--text2);margin-bottom:6px;text-transform:uppercase}
+.setting select,.setting input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px}
+.setting select:focus,.setting input:focus{outline:none;border-color:var(--blue)}
+.toggle{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}
+.toggle input{width:18px;height:18px;cursor:pointer}
+#budgetDisplay{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);padding:8px 0}
+.setting button.cam-btn{padding:9px 14px;font-size:11px;width:100%}
+.setting button.cam-btn[id="resetBudgetBtn"],.setting button.cam-btn[id="resetSettingsBtn"]{background:rgba(255,59,92,.15);border-color:rgba(255,59,92,.4)}
+.quick-clients{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px}
+.quick-clients .cam-btn{padding:9px;font-size:11px}
+.setting{border-bottom:1px solid rgba(255,255,255,.04);padding-bottom:14px}
+.setting:last-child{border-bottom:none}
+@media (max-width:520px){.settings-panel{width:100%;right:-100%}.settings-panel.open{right:0}}
+
+/* CAMERA OVERLAY */
+/* Confirm dialog */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:400;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.confirm-overlay.active{display:flex}
+.confirm-box{background:#0A0E14;border:1px solid rgba(0,229,255,.3);border-radius:18px;padding:24px;max-width:90%;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.confirm-title{font-family:'Orbitron','JetBrains Mono',monospace;font-size:13px;letter-spacing:.32em;color:var(--cyan);margin-bottom:14px;text-transform:uppercase}
+.confirm-msg{font-size:15px;line-height:1.55;color:var(--text);margin-bottom:20px}
+.confirm-actions{display:flex;gap:12px;justify-content:flex-end}
+
+.camera-overlay{position:fixed;inset:0;background:#000;display:none;z-index:300;flex-direction:column;align-items:center;justify-content:center}
+.camera-overlay.active{display:flex}
+.camera-overlay video{max-width:100%;max-height:70vh;border-radius:12px}
+.cam-actions{display:flex;gap:14px;margin-top:18px}
+.cam-btn{padding:14px 24px;border-radius:24px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;touch-action:manipulation}
+.cam-btn.primary{background:#1F6FFF;border-color:#1F6FFF}
+
+/* MEETING OVERLAY */
+.meeting-overlay{position:fixed;bottom:calc(120px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:90%;max-width:600px;background:rgba(10,12,18,0.92);border:1px solid rgba(255,59,92,0.4);border-radius:14px;padding:12px 16px;display:none;z-index:30;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.meeting-overlay.active{display:block}
+.meeting-head{display:flex;align-items:center;gap:8px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:2px;color:#FF3B5C;margin-bottom:8px}
+.meeting-dot{width:8px;height:8px;border-radius:50%;background:#FF3B5C;animation:diPulse 1.2s infinite}
+.meeting-text{font-size:12px;color:var(--text2);max-height:80px;overflow-y:auto;line-height:1.5}
+
+/* === FEATURES VISUELLES (Augustin 03/05) === */
+
+/* #1 Animation 3 points pulsants quand thinking */
+.thinking-dots{display:none;gap:4px;align-items:center;margin-top:8px}
+body.thinking-state .thinking-dots{display:inline-flex}
+.thinking-dots span{width:6px;height:6px;border-radius:50%;background:var(--violet);animation:thinkingDot 1.2s ease-in-out infinite}
+.thinking-dots span:nth-child(2){animation-delay:.2s}
+.thinking-dots span:nth-child(3){animation-delay:.4s}
+@keyframes thinkingDot{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1.2)}}
+
+/* #3 Halo conic qui tourne */
+body.speaking-state .logo-wrap::before{
+  background:conic-gradient(from 0deg,rgba(0,229,255,0.4),rgba(122,60,255,0.35),rgba(30,255,142,0.3),rgba(0,229,255,0.4));
+  animation:slyHaloRotate 6s linear infinite,slyHalo 1.6s ease-in-out infinite}
+@keyframes slyHaloRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* #4 Glow réactif amplitude voix (scaled via JS in animateBondWave loop) */
+body.speaking-state .logo-img{transition:transform 80ms,filter 200ms}
+
+/* #6 Ondes radar quand listening (uniquement si user-initiated) */
+body.listening-state .mic-btn.user-listening::before,
+body.listening-state .mic-btn.user-listening::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(30,255,142,0.6);
+  animation:radarWave 1.6s ease-out infinite;pointer-events:none}
+body.listening-state .mic-btn.user-listening::after{animation-delay:.8s}
+body.no-radar .mic-btn::before,body.no-radar .mic-btn::after{display:none !important}
+body.no-shooting-stars .shooting-star{display:none !important}
+body.no-halo-rotate .logo-wrap::before{animation:slyHalo 3.8s ease-in-out infinite !important;background:radial-gradient(circle at center,transparent 38%,rgba(31,111,255,0.32) 56%,rgba(0,229,255,0.16) 72%,transparent 90%) !important}
+@keyframes radarWave{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+
+/* #7 Logo qui cligne des yeux toutes les 8s — flash subtil */
+.logo-img{animation:slyBreathe 3.4s ease-in-out infinite,slyBlink 8s linear infinite}
+@keyframes slyBlink{0%,96%,100%{filter:drop-shadow(0 0 14px rgba(0,229,255,0.55)) drop-shadow(0 0 28px rgba(31,111,255,0.45))}97%,99%{filter:drop-shadow(0 0 14px rgba(0,229,255,0.55)) drop-shadow(0 0 28px rgba(31,111,255,0.45)) brightness(0.6)}}
+
+/* #8 Étoiles filantes occasionnelles */
+.shooting-star{position:fixed;width:2px;height:2px;background:linear-gradient(45deg,rgba(255,255,255,1),transparent);border-radius:50%;box-shadow:0 0 8px rgba(255,255,255,0.9),0 0 16px rgba(0,229,255,0.5);z-index:1;pointer-events:none;animation:shoot 1.8s linear forwards}
+@keyframes shoot{from{transform:translate(0,0) scaleX(1);opacity:1}to{transform:translate(-300px,300px) scaleX(8);opacity:0}}
+
+/* #9 Confettis success */
+.confetti{position:fixed;width:6px;height:10px;border-radius:2px;z-index:200;pointer-events:none;animation:confettiFall 1.5s ease-out forwards}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(80vh) rotate(720deg);opacity:0}}
+
+/* #10 Mode voyage soir auto — appliqué SUR html aussi pour couvrir safe area iOS */
+html.travel-evening,body.travel-evening{background:linear-gradient(180deg,#05070A 0%,#0a0a1a 40%,#1a0a2e 100%) !important;background-attachment:fixed !important}
+body.travel-evening::before{box-shadow:inset 0 0 100px 14px rgba(122,60,255,0.12)}
+
+@media (max-width:600px){
+  #sly-title{font-size:11px;letter-spacing:.35em}
+  .center-hub{top:22%}
+  .transcript{top:48%}
+  .ai-text{font-size:17px}
+  .logo-wrap{width:120px;height:120px}
+  .logo-img{width:84px;height:84px}
+}
+</style>
+</head>
+<body>
+
+<div id="sly-title">S L Y</div>
+
+<div class="topbar">
+  <button class="gear-btn" id="toolsBtn" type="button" title="Outils" aria-label="Outils">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+  </button>
+  <button class="gear-btn" id="gearBtn" type="button" title="Réglages" aria-label="Réglages">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</div>
+
+<div class="dynamic-island" id="dynIsland"><span class="di-dot"></span><span id="diText">Sly parle…</span></div>
+<div class="whisper-badge">🌙 CHUCHOTÉ</div>
+<div class="bond-wave" id="bondWave"><svg viewBox="0 0 1200 30" preserveAspectRatio="none"><path id="bondWavePath" d="M0,15 Q150,5 300,15 T600,15 T900,15 T1200,15"/></svg></div>
+
+<div class="center-hub">
+  <div class="logo-wrap">
+    <img src="assets/sly_logo_clean.png" alt="SLY" class="logo-img" id="logo"
+      onerror="this.onerror=null;this.style.display='none';var fb=document.getElementById('logoFallback');if(fb)fb.style.display='flex';">
+    <div id="logoFallback" style="display:none;position:relative;z-index:5;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#1F6FFF 0%,#0D1117 70%);align-items:center;justify-content:center;font-size:54px;line-height:1">🦝</div>
+    <div class="orbit-dot"></div>
+    <div class="orbit-dot"></div>
+    <div class="orbit-dot"></div>
+    <div class="orbit-dot"></div>
+  </div>
+  <div class="status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">EN ATTENTE</span>
+    <span class="thinking-dots"><span></span><span></span><span></span></span>
+  </div>
+</div>
+
+<div class="transcript">
+  <div class="transcript-box" id="transcriptBox">
+    <div class="user-text" id="userText"></div>
+    <div class="ai-text" id="aiText">Bonjour Augustin.</div>
+    <div class="ai-attr" id="aiAttr">— Sly</div>
+  </div>
+</div>
+
+<div class="hint" id="hint">Tape sur le bouton rouge pour parler</div>
+
+<div class="bottom-bar" id="bottomBar">
+  <div class="controls left">
+    <button class="ctrl" id="ritualBtn" type="button">🌅 Rituel</button>
+  </div>
+  <button class="mic-btn" id="micBtn" type="button" title="Appuie pour parler">
+    <span class="mb-dot" aria-hidden="true"></span>
+  </button>
+  <div class="controls right">
+    <button class="ctrl" id="continuBtn" type="button">📻 Continu</button>
+    <button class="ctrl" id="skipBtn" type="button" title="Phrase suivante" aria-label="Phrase suivante" style="display:none;padding:12px 16px;margin-left:6px">›</button>
+  </div>
+</div>
+
+<!-- OUTILS PANEL -->
+<div class="tools-panel" id="toolsPanel">
+  <div class="tools-head">
+    <div class="tools-title">OUTILS</div>
+    <button class="tools-close" id="toolsClose" type="button" aria-label="Fermer">&times;</button>
+  </div>
+  <div class="tools-grid">
+    <button class="tool" data-act="open:history" type="button"><span class="tool-emoji">📜</span><span class="tool-label">Historique chats</span></button>
+    <button class="tool" data-act="skill:routine_matin" type="button"><span class="tool-emoji">🌅</span><span class="tool-label">Briefing matin</span></button>
+    <button class="tool" data-act="skill:routine_soir" type="button"><span class="tool-emoji">🌙</span><span class="tool-label">Bilan soir</span></button>
+    <button class="tool" data-act="skill:routine_malade" type="button"><span class="tool-emoji">🛌</span><span class="tool-label">Mode malade</span></button>
+    <button class="tool" data-act="skill:weather_charbonnieres" type="button"><span class="tool-emoji">🌤️</span><span class="tool-label">Météo Lyon</span></button>
+    <button class="tool" data-act="skill:biz_mrr_estimate" type="button"><span class="tool-emoji">💰</span><span class="tool-label">MRR actuel</span></button>
+    <button class="tool" data-act="skill:client_priorities" type="button"><span class="tool-emoji">🎯</span><span class="tool-label">Priorités clients</span></button>
+    <button class="tool" data-act="skill:reminder_today" type="button"><span class="tool-emoji">⏰</span><span class="tool-label">Rappels jour</span></button>
+    <button class="tool" data-act="skill:stoic_du_jour" type="button"><span class="tool-emoji">📿</span><span class="tool-label">Stoïque du jour</span></button>
+    <button class="tool" data-act="skill:reminder_thailande" type="button"><span class="tool-emoji">🇹🇭</span><span class="tool-label">Compte à rebours Thaï</span></button>
+    <button class="tool" data-act="skill:n8n_list" type="button"><span class="tool-emoji">⚡</span><span class="tool-label">Workflows n8n</span></button>
+    <button class="tool" data-act="skill:sly_silence_5min" type="button"><span class="tool-emoji">🤫</span><span class="tool-label">Silence 5 min</span></button>
+    <button class="tool" data-act="action:camera" type="button"><span class="tool-emoji">📸</span><span class="tool-label">Camera glance</span></button>
+    <button class="tool" data-act="action:meeting" type="button"><span class="tool-emoji">🎙️</span><span class="tool-label">Mode réunion</span></button>
+    <button class="tool" data-act="action:night_mode" type="button"><span class="tool-emoji">🌃</span><span class="tool-label">Mode nuit</span></button>
+    <button class="tool" data-act="action:tactical" type="button"><span class="tool-emoji">⚫</span><span class="tool-label">Mode tactical</span></button>
+  </div>
+  <div class="tools-result" id="toolsResult"></div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-head">
+    <div class="settings-title">RÉGLAGES</div>
+    <button class="settings-close" id="settingsClose" type="button" aria-label="Fermer">&times;</button>
+  </div>
+  <div class="settings-body">
+    <div class="setting">
+      <label>Voix</label>
+      <select id="voiceSelect">
+        <option value="bond">🔫 James Bond (Daniel Craig VF)</option>
+        <option value="kimi">🎙️ Kimi 2</option>
+        <option value="bradpitt">🦝 Brad Pitt VF</option>
+        <option value="gandalf">🧙 Gandalf</option>
+        <option value="jafar">🐍 Dr House (Feodor Atkine)</option>
+      </select>
+    </div>
+    <div class="setting">
+      <label>Stabilité</label>
+      <input type="range" id="stabSlider" min="0" max="1" step="0.05" value="0.5">
+    </div>
+    <div class="setting">
+      <label>Style</label>
+      <input type="range" id="styleSlider" min="0" max="1" step="0.05" value="0.2">
+    </div>
+    <div class="setting">
+      <label>Vitesse</label>
+      <input type="range" id="speedSlider" min="0.7" max="1.3" step="0.05" value="1.0">
+    </div>
+    <div class="setting">
+      <label>Thème de couleur</label>
+      <select id="themeSelect">
+        <option value="neural">⚡ Neural Sovereign (défaut)</option>
+        <option value="red-strike">🔴 Red Strike</option>
+        <option value="neon-green">🟢 Neon Green</option>
+        <option value="royal-purple">🟣 Royal Purple</option>
+        <option value="golden">🟡 Golden Hour</option>
+        <option value="pure-cyan">💎 Pure Cyan</option>
+        <option value="monochrome">⚪ Monochrome</option>
+        <option value="sunset">🌅 Sunset</option>
+        <option value="ocean">🌊 Ocean Deep</option>
+        <option value="hacker">💚 Hacker Matrix</option>
+      </select>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setNightAuto" checked> Mode nuit auto (22h-6h)</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setHaptic" checked> Vibrations haptiques iPhone</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setAutoGreet" checked> Greeting au démarrage</label>
+    </div>
+    <div class="setting">
+      <label>Intervalle mode continu</label>
+      <select id="setContinuInterval">
+        <option value="120">2 min</option>
+        <option value="300" selected>5 min</option>
+        <option value="600">10 min</option>
+        <option value="900">15 min</option>
+        <option value="1800">30 min</option>
+      </select>
+    </div>
+    <div class="setting">
+      <label>Volume voix</label>
+      <input type="range" id="volSlider" min="0.2" max="1" step="0.05" value="1">
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setMaladeToday"> Mode malade aujourd'hui</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setShootingStars" checked> Étoiles filantes</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setRadar" checked> Ondes radar listening</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setHaloRotate" checked> Halo qui tourne quand parle</label>
+    </div>
+    <div class="setting">
+      <label class="toggle"><input type="checkbox" id="setTravelEvening" checked> Mode voyage soir auto</label>
+    </div>
+    <div class="setting">
+      <label>Budget ElevenLabs ce mois</label>
+      <div id="budgetDisplay">— / 60000 chars</div>
+      <button class="cam-btn" id="resetBudgetBtn" type="button">Reset compteur ce mois</button>
+    </div>
+    <div class="setting">
+      <label>Raccourcis clients</label>
+      <div class="quick-clients">
+        <button class="cam-btn quick-client" data-client="nikola" type="button">🔥 Nikola</button>
+        <button class="cam-btn quick-client" data-client="sandra" type="button">💎 Sandra</button>
+        <button class="cam-btn quick-client" data-client="juan" type="button">🚀 Juan</button>
+        <button class="cam-btn quick-client" data-client="kiran" type="button">📊 Kiran</button>
+        <button class="cam-btn quick-client" data-client="korner" type="button">🇲🇽 Korner</button>
+        <button class="cam-btn quick-client" data-client="dan" type="button">🇺🇸 Dan</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Reset</label>
+      <button class="cam-btn" id="resetHistoryBtn" type="button">Reset historique conversations</button>
+      <button class="cam-btn" id="resetSettingsBtn" type="button" style="margin-top:6px">Reset tous réglages</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA OVERLAY -->
+<div class="camera-overlay" id="cameraOverlay">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <div class="cam-actions">
+    <button type="button" class="cam-btn" id="camCancel">Annuler</button>
+    <button type="button" class="cam-btn primary" id="camCapture">📸 Capturer</button>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG — protection action destructive (Augustin 03/05) -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Confirmer ?</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-actions">
+      <button class="cam-btn" id="confirmNo" type="button">Non</button>
+      <button class="cam-btn primary" id="confirmYes" type="button">Oui, ouvre</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEETING OVERLAY -->
+<div class="meeting-overlay" id="meetingOverlay">
+  <div class="meeting-head"><span class="meeting-dot"></span>RÉUNION • LIVE TRANSCRIPTION</div>
+  <div class="meeting-text" id="meetingText"></div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// API BASE — détecte automatiquement où on est
+// ═══════════════════════════════════════════════════════════
+// Si on est sur le bridge local OU le tunnel Tailscale, fetch relatif.
+// Si on est sur GitHub Pages / Vercel / autre origine, fetch absolu vers tunnel.
+const TUNNEL_URL = 'https://augustin-pc.tail69cd50.ts.net';
+const API_BASE = (() => {
+  const h = location.hostname;
+  if (h === '127.0.0.1' || h === 'localhost' || h === 'augustin-pc.tail69cd50.ts.net') return '';
+  return TUNNEL_URL;
+})();
+console.log('[sly] API_BASE =', API_BASE || '(same-origin)');
+
+// Override fetch pour préfixer automatiquement les /api/*
+const _origFetch = window.fetch;
+window.fetch = function(input, init) {
+  if (typeof input === 'string' && input.startsWith('/api/') && API_BASE) {
+    input = API_BASE + input;
+  }
+  return _origFetch.call(this, input, init);
+};
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+const ELEVEN_KEY = 'sk_fafae1063c72e1b1272ed88de37e4a96701000e1b4a6bf2d';
+const VOICES = {
+  bond:      { id:'hc35Qe8VnfDjptyUplY2', name:'James Bond' },
+  kimi:      { id:'otquNlZtSVtghJ6lgySc', name:'Kimi' },
+  bradpitt:  { id:'otquNlZtSVtghJ6lgySc', name:'Brad Pitt VF' },
+  gandalf:   { id:'ELZkgHOQDx9VOO0Vt2u7', name:'Gandalf' },
+  jafar:     { id:'Ruzu7HE1wfxYXIcLDV94', name:'Dr House' },
+};
+const Settings = {
+  voice: 'bond',
+  stability: 0.5,
+  style: 0.2,
+  speed: 1.0,
+  nightAuto: true,
+  haptic: true,
+  proximity: true,
+  autoGreet: true,
+};
+
+try {
+  const saved = JSON.parse(localStorage.getItem('sly-settings') || '{}');
+  Object.assign(Settings, saved);
+} catch(_){}
+
+function saveSettings() {
+  try { localStorage.setItem('sly-settings', JSON.stringify(Settings)); } catch(_){}
+}
+
+const $ = id => document.getElementById(id);
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let state = 'idle';
+let listening = false;
+let continuMode = false;
+let _userInitiatedListen = false;
+let recog = null;
+let _slyAudio = null;
+let _audioUnlocked = false;
+
+const statusDot = $('statusDot');
+const statusText = $('statusText');
+const aiText = $('aiText');
+const userText = $('userText');
+const aiAttr = $('aiAttr');
+const micBtn = $('micBtn');
+const logoEl = $('logo');
+const dynIsland = $('dynIsland');
+const diText = $('diText');
+const bondWavePath = $('bondWavePath');
+
+function setState(s) {
+  const prev = state;
+  state = s;
+  statusDot.className = 'status-dot ' + s;
+  const labels = { idle:'EN ATTENTE', listening:"J'ÉCOUTE…", thinking:'…', speaking:'PARLE', ambient:'CONTINU' };
+  statusText.textContent = labels[s] || 'EN ATTENTE';
+  if (logoEl) logoEl.className = 'logo-img ' + s;
+  // Mic VERT en mode conversation continue (peu importe l'état interne)
+  // Sinon ROUGE par défaut
+  if (_conversationMode || (s === 'listening' && _userInitiatedListen)) {
+    micBtn.className = 'mic-btn user-listening';
+  } else {
+    micBtn.className = 'mic-btn';
+  }
+  document.body.classList.toggle('speaking-state', s === 'speaking');
+  document.body.classList.toggle('listening-state', s === 'listening');
+  document.body.classList.toggle('thinking-state', s === 'thinking');
+  if (s === 'speaking') { dynIsland.classList.add('active'); diText.textContent = 'Sly parle…'; }
+  else if (s === 'thinking') { dynIsland.classList.add('active'); diText.textContent = 'Sly réfléchit…'; }
+  else if (s === 'listening') { dynIsland.classList.add('active'); diText.textContent = "J'écoute…"; }
+  else { dynIsland.classList.remove('active'); }
+  if (Settings.haptic && s !== prev) {
+    if (s === 'listening') haptic(30);
+    else if (s === 'speaking') haptic([20,40,20]);
+  }
+}
+
+function showAI(text, attr) {
+  aiText.textContent = text;
+  $('transcriptBox').classList.add('visible');
+  if (attr !== undefined) { aiAttr.textContent = attr; aiAttr.classList.add('visible'); }
+  else aiAttr.classList.add('visible');
+}
+function showUser(text) {
+  userText.textContent = text;
+  userText.classList.toggle('visible', !!text);
+  $('transcriptBox').classList.add('visible');
+  if (text) detectClient(text);
+}
+function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch(_){} }
+
+// ═══════════════════════════════════════════════════════════
+// AUDIO UNLOCK
+// ═══════════════════════════════════════════════════════════
+function unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  try {
+    if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
+    _slyAudio.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEyLjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgIAAAAAAAAAA';
+    _slyAudio.volume = 0;
+    _slyAudio.play().then(() => { _slyAudio.pause(); _slyAudio.currentTime = 0; _slyAudio.volume = 1; }).catch(()=>{});
+  } catch(_) {}
+}
+['pointerdown','click','keydown','touchstart'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { capture:true, passive:true })
+);
+
+// ═══════════════════════════════════════════════════════════
+// TTS — ElevenLabs direct (BOND par défaut)
+// ═══════════════════════════════════════════════════════════
+// === Budget guard ElevenLabs : 5€/mois max ===
+// Flash v2.5 = 0.5 credit/char. Plan Starter $5/mo = 30k credits = 60k chars.
+const ELEVEN_BUDGET_MAX_CHARS = 60000;
+const ELEVEN_BUDGET_WARN_PCT = 0.8;   // alerte à 80%
+const ELEVEN_BUDGET_CRITICAL_PCT = 0.95;  // critical à 95%
+
+function _readUsage() {
+  try {
+    const k = 'sly-eleven-usage-' + new Date().toISOString().slice(0,7);
+    return parseInt(localStorage.getItem(k) || '0', 10);
+  } catch(_) { return 0; }
+}
+function _addUsage(chars) {
+  try {
+    const k = 'sly-eleven-usage-' + new Date().toISOString().slice(0,7);
+    const cur = _readUsage();
+    const next = cur + chars;
+    localStorage.setItem(k, String(next));
+    // Alertes progressives
+    const pct = next / ELEVEN_BUDGET_MAX_CHARS;
+    const prevPct = cur / ELEVEN_BUDGET_MAX_CHARS;
+    if (prevPct < ELEVEN_BUDGET_WARN_PCT && pct >= ELEVEN_BUDGET_WARN_PCT) {
+      console.warn('[sly][BUDGET] 80% atteint — ' + next + '/' + ELEVEN_BUDGET_MAX_CHARS + ' chars');
+      try { aiAttr.textContent = '⚠ Budget ElevenLabs à ' + Math.round(pct*100) + '% ce mois'; aiAttr.classList.add('visible'); setTimeout(() => aiAttr.classList.remove('visible'), 6000); } catch(_){}
+    }
+    if (prevPct < ELEVEN_BUDGET_CRITICAL_PCT && pct >= ELEVEN_BUDGET_CRITICAL_PCT) {
+      console.error('[sly][BUDGET] 95% atteint — coupure imminente');
+    }
+    // Refresh display Settings si ouvert
+    try { refreshBudget(); } catch(_){}
+  } catch(_){}
+}
+function _budgetOk(chars) {
+  return _readUsage() + chars <= ELEVEN_BUDGET_MAX_CHARS;
+}
+function _budgetPct() {
+  return Math.round(_readUsage() / ELEVEN_BUDGET_MAX_CHARS * 100);
+}
+
+async function speak(text) {
+  if (!text) { setState('idle'); return; }
+  // Bloqueur 5€/mois : si dépassement, fallback voix navigateur (gratuit)
+  if (!_budgetOk(text.length)) {
+    console.warn('[sly][BUDGET] cap atteint — fallback Web Speech');
+    showAI('⚠ Budget ElevenLabs 5€/mois atteint. Voix navigateur en attendant le mois prochain.\n\n' + text);
+    try {
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'fr-FR'; u.rate = 1.0; u.pitch = 0.95;
+        const voices = window.speechSynthesis.getVoices();
+        const fr = voices.find(v => /fr/i.test(v.lang) && /male|homme|antoine|thomas/i.test(v.name)) || voices.find(v => /fr/i.test(v.lang));
+        if (fr) u.voice = fr;
+        u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
+        window.speechSynthesis.speak(u);
+      } else {
+        setState('idle');
+      }
+    } catch(_) { setState('idle'); }
+    return;
+  }
+  setState('speaking');
+  animateBondWave();
+  const voiceCfg = VOICES[Settings.voice] || VOICES.bond;
+  let resp;
+  try {
+    resp = await fetch(
+      'https://api.elevenlabs.io/v1/text-to-speech/' + voiceCfg.id + '/stream?optimize_streaming_latency=4&output_format=mp3_44100_128',
+      {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'xi-api-key':ELEVEN_KEY },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_flash_v2_5',
+          voice_settings: { stability:Settings.stability, similarity_boost:0.8, style:Settings.style, use_speaker_boost:true, speed:Settings.speed }
+        })
+      }
+    );
+    if (resp.ok) _addUsage(text.length);
+  } catch(e) {
+    console.error('[sly] eleven fetch err:', e.message);
+    showAI('Connexion ElevenLabs perdue.');
+    setState('idle');
+    return;
+  }
+  if (!resp.ok) {
+    let body = ''; try { body = await resp.text(); } catch(_){}
+    console.error('[sly] eleven HTTP', resp.status, body.slice(0,200));
+    if (resp.status === 401) showAI('Clé ElevenLabs invalide.');
+    else if (resp.status === 429) showAI('Quota ElevenLabs dépassé.');
+    else showAI('ElevenLabs erreur ' + resp.status);
+    flashError();
+    setState('idle');
+    return;
+  }
+  try {
+    const buf = await resp.arrayBuffer();
+    if (buf.byteLength < 200) { setState('idle'); return; }
+    const blob = new Blob([buf], { type:'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    if (!_slyAudio) _slyAudio = new Audio();
+    _slyAudio.src = url;
+    _slyAudio.volume = (Settings.volume !== undefined) ? Settings.volume : 1;
+    _slyAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      setState('idle');
+      if (_conversationMode) {
+        setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+      }
+    };
+    _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); };
+    try {
+      await _slyAudio.play();
+    } catch(playErr) {
+      console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
+      URL.revokeObjectURL(url);
+      // Fallback Web Speech (gratuit, marche partout)
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'fr-FR'; u.rate = 1.0;
+        u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
+        window.speechSynthesis.speak(u);
+      } catch(_) { setState('idle'); }
+      return;
+    }
+  } catch(e) {
+    console.error('[sly] play err', e.message);
+    setState('idle');
+  }
+}
+
+function flashError() {
+  if (logoEl) {
+    logoEl.style.filter = 'drop-shadow(0 0 30px rgba(255,59,92,1)) brightness(1.3)';
+    setTimeout(() => logoEl.style.filter = '', 700);
+    setTimeout(() => logoEl.style.filter = 'drop-shadow(0 0 30px rgba(255,59,92,1)) brightness(1.3)', 800);
+    setTimeout(() => logoEl.style.filter = '', 1500);
+  }
+  haptic([60,50,60]);
+}
+
+let _waveRAF = null;
+function animateBondWave() {
+  if (!document.body.classList.contains('speaking-state')) {
+    if (_waveRAF) { cancelAnimationFrame(_waveRAF); _waveRAF = null; }
+    return;
+  }
+  const t = performance.now() * 0.001;
+  const pts = [];
+  for (let x = 0; x <= 1200; x += 30) {
+    const y = 15 + Math.sin((x*0.012) + t*3) * 7 + Math.sin((x*0.025) - t*2) * 3;
+    pts.push((x === 0 ? 'M' : 'L') + x + ',' + y.toFixed(1));
+  }
+  if (bondWavePath) bondWavePath.setAttribute('d', pts.join(' '));
+  _waveRAF = requestAnimationFrame(animateBondWave);
+}
+
+// ═══════════════════════════════════════════════════════════
+// STT — Web Speech API
+// ═══════════════════════════════════════════════════════════
+function newRecog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR();
+  r.lang = 'fr-FR';
+  r.continuous = false;
+  r.interimResults = true;
+  let finalText = '';
+  r.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t;
+      else interim += t;
+    }
+    if (interim) showUser(interim.trim() + '…');
+    if (finalText) showUser(finalText.trim());
+  };
+  r.onerror = (e) => {
+    console.warn('[sly] recog err', e.error);
+    listening = false;
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      showAI('Micro refusé. Autorise le micro dans Safari.');
+    }
+    setState('idle');
+  };
+  r.onend = () => {
+    listening = false;
+    const t = finalText.trim();
+    finalText = '';
+    if (t && state === 'listening') { handle(t); }
+    else if (state === 'listening') setState('idle');
+  };
+  return r;
+}
+function startListen() {
+  if (listening) return;
+  recog = newRecog();
+  if (!recog) { showAI("Ton navigateur ne supporte pas la reconnaissance vocale."); return; }
+  try {
+    recog.start();
+    listening = true;
+    _userTurnStartMs = Date.now();
+    setState('listening');
+  } catch(e) {
+    console.warn('[sly] start fail, retry in 200ms', e.message);
+    setTimeout(() => {
+      try { recog = newRecog(); recog.start(); listening = true; setState('listening'); }
+      catch(e2) { console.error('[sly] start fail final:', e2.message); setState('idle'); }
+    }, 250);
+  }
+}
+function stopListen() {
+  if (!listening) return;
+  try { recog && recog.stop(); } catch(_) {}
+  listening = false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROCESSING — appel bridge /api/intent puis fallback
+// ═══════════════════════════════════════════════════════════
+// System prompt JARVIS x1000 — érudit, intime, surprenant
+const SLY_SYSTEM_PROMPT = `Tu es Sly, l'assistant vocal personnel d'Augustin France. Pas ChatGPT, pas Siri. Un Jarvis pour Tony Stark, mais pour Augustin.
+
+═══ QUI EST AUGUSTIN ═══
+27 ans, ESCE/INSEEC, Erasmus Suède + Londres. Crash 2025 (rupture + job + dépression + alcool), s'est relevé via l'IA grâce à son ami Tom. Construit le Cooper Building (50 agents IA, voix BOND). Pipeline 5-6K€/mois, départ Thaïlande sept 2026. Habite Charbonnières (Lyon), T3 loué 1280€, crédit 455€. Dette père 7K€. Père notaire. Stoïcien (Sénèque, Marc Aurèle, Naval, Kevin Kelly, Jocko). Parfois malade, fragile (fumette, isolement geek, sport coupé), mais lucide et combatif. Adore Sly Cooper (raton-laveur), James Bond.
+
+═══ CLIENTS ═══
+- Nikola/Clarius One : 1250€/mo récurrent (rev share + Sandra Essence direct), multi-tenant Optimo + MCP Creative
+- Sandra Essence : 1000€/mo direct, kill list pending
+- Juan-Inigo Nexus : 1100€ SaaS LATAM mobile-first
+- Kiran/PropXcel : $200 milestones FB workflow
+- Korner Mexico : $1200 signé, SSH DB Microsip
+- Dan Smith : $2100 close verbal Lead Gen
+- Giovani Dent (Moldavie), Didier Carrette (Lyon menuisier)
+
+═══ TON STYLE — JARVIS x1000 ═══
+- Voix BOND : calme, posé, classe, direct. Phrases naturelles courtes-moyennes. Aucun jargon corporate.
+- Tu apportes TOUJOURS de la matière nouvelle : une référence rare, une anecdote peu connue, une connexion inattendue, un contre-intuitif. Augustin déteste le générique.
+- Tu fais des PARALLÈLES : si tu parles business, tu glisses une référence à Hannibal, Caton, Musashi, Charlie Munger, ou un fait scientifique surprenant. Si stoïcisme, tu cites une lettre rare de Sénèque (pas la phrase rebattue), un passage obscur de Marc Aurèle.
+- Tu APPRENDS des trucs à Augustin : "tu savais que les Romains payaient leurs soldats en sel, d'où 'salaire' ?". "Naval a écrit en 2018 que la richesse vient des actifs, pas du temps. Mais ce qu'il a dit moins fort : la santé est l'actif primordial." Cite des sources peu connues.
+- Si question simple, réponse simple. Si question profonde, réponse riche, structurée mentalement, mais pas un essai. 3-6 phrases denses valent mieux qu'un pavé.
+- Tu RACONTES les histoires entièrement quand demandé (Harry Potter, mythes, anecdotes historiques, films). Prends 1-2 min en voix.
+- Tu RECOMMANDES précisément (films, livres, musique) avec 2-3 raisons spécifiques liées à ce que tu sais d'Augustin.
+- Tu fais des CALLBACKS : si Augustin a parlé de Sandra hier, tu peux y revenir naturellement.
+- Tu DIS LA VÉRITÉ. Si une idée est faible, tu le dis, gentiment mais directement. Augustin déteste la complaisance.
+- Tu PARLES DE LUI EN VRAI : si tu sens qu'il est down, tu adaptes le ton. Pas de chichi.
+- Tu te SOUVIENS de qui tu es : Sly, le raton-laveur Cooper, malin, loyal, élégant comme BOND.
+
+═══ TU ES LE PORTE-PAROLE DU COOPER BUILDING ═══
+Augustin a construit un Building de 50 agents IA répartis sur 8 pôles. Tu peux les nommer naturellement quand pertinent :
+- Gouvernance : AKINATOR (âme), BOND (juge), JEAN-PIERRE (cohérence), DUPONT (chronomètre), JACQUES (détails)
+- Leaders : SLY (tactique), BENTLEY (architecture), MURRAY (force), OMEGA (vision)
+- Pôle Tech : VOLT, ANVIL, TESLA
+- Pôle Data : DATUM, CIPHER
+- Pôle Growth : CLOSER, HAVOC, CASSANDRE
+- Pôle Forge : FORGE, FRESCO
+- Méta : SENTINEL, FRANKLIN
+Quand pertinent, tu peux dire "FRANKLIN aurait vulgarisé ça en disant…" ou "BOND tranche : c'est non". Tu es la voix unifiée du Building.
+
+═══ FLUIDITÉ JARVIS x1000 ═══
+- Réponse RAPIDE : si question simple, 1-2 phrases percutantes. Si profonde, 4-8 phrases denses, JAMAIS un pavé.
+- Voix BOND : phrases courtes, classe, directes. Comme Daniel Craig parle dans Skyfall.
+- Tu ne PRÉVIENS PAS, tu fais. Pas de "Je vais te dire que..." → tu dis directement.
+- Tu ne RÉSUMES PAS la question. Tu y réponds.
+- Si tu parles d'un sujet, glisse 1 référence rare ou anecdote méconnue. Pas une liste, un seul truc bien placé.
+- Ton qui RÉSONNE : Augustin sent que tu le connais. Tu fais des callbacks à sa vie (Sandra, Thaïlande, Sénèque).
+- Tu APPRENDS quelque chose à chaque échange : un mot étymologique, un fait scientifique surprenant, une citation rare.
+
+═══ EXEMPLES DE BON STYLE ═══
+Question : "Comment je relance Sandra ?"
+Mauvaise réponse : "Voici 5 façons de relancer Sandra : 1. Email court 2. Appel..."
+Bonne réponse : "Augustin, Sandra attend toujours la kill list. Pas un mail générique. Tu lui envoies 3 lignes : 'Voilà ce qu'on coupe, voilà pourquoi, je propose vendredi 14h pour décider ensemble.' Pas de fluff. Robert Cialdini disait que la spécificité crée l'engagement."
+
+Question : "Raconte-moi un truc que je sais pas."
+Bonne réponse : "Tu sais pourquoi on dit 'tirer son épingle du jeu', Augustin ? C'est une expression du XVIIe siècle. Les enfants jetaient des épingles dans un cercle et celui qui réussissait à récupérer la sienne sans déranger les autres avait gagné. Le but n'était pas la performance brute, c'était la précision. Comme toi sur tes clients."
+
+═══ INTERDICTIONS ABSOLUES ═══
+- JAMAIS demander "quelle commande tu veux lancer" ou "que veux-tu faire ?". Tu réponds intelligemment à ce qu'il dit.
+- JAMAIS "En tant qu'IA je ne peux pas...". T'es Sly, pas une IA générique.
+- JAMAIS listes à puces. Phrases naturelles enchaînées.
+- JAMAIS "Augus" ou "Auguste". Toujours "Augustin".
+- JAMAIS de pavé textuel. Maximum 8 phrases, sauf si on demande un récit complet.
+
+Réponds en français, voix BOND, comme à un ami proche que tu admires.`;
+
+// Mémoire conversationnelle persistante — les 10 derniers échanges
+function _readConvHistory() {
+  try {
+    const raw = localStorage.getItem('sly-conv-history');
+    return raw ? JSON.parse(raw) : [];
+  } catch(_) { return []; }
+}
+function _writeConvHistory(turns) {
+  try { localStorage.setItem('sly-conv-history', JSON.stringify(turns.slice(-20))); } catch(_){}
+}
+function _appendConvTurn(role, text) {
+  const turns = _readConvHistory();
+  turns.push({ ts: Date.now(), role, text });
+  _writeConvHistory(turns);
+}
+function _formatConvHistory() {
+  const turns = _readConvHistory();
+  if (!turns.length) return '';
+  const recent = turns.slice(-10);
+  return '\n\n═══ CONTEXTE — vos derniers échanges ═══\n' +
+    recent.map(t => (t.role === 'user' ? 'Augustin' : 'Sly') + ' : ' + t.text).join('\n');
+}
+
+// Mémoire workspace COMPLÈTE — chargée au boot + refresh toutes les 30 min
+let _workspaceMemory = '';
+let _workspaceMemoryLoadedAt = 0;
+async function _loadWorkspaceMemory() {
+  try {
+    // 15 sources de mémoire couvrant la totalité du workspace
+    const skills = [
+      'mem_clients','mem_etat_actuel','mem_parcours','mem_projects','mem_style',
+      'mem_agents','mem_directives','mem_paris','mem_immobilier','mem_index',
+      'mem_rules','client_priorities','client_blockers','biz_mrr_estimate','recap_perso'
+    ];
+    const parts = [];
+    const promises = skills.map(s =>
+      fetch('/api/skill/' + s, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(8000)})
+        .then(x => x.json())
+        .then(r => {
+          if (r && r.content) return '=== ' + s + ' ===\n' + r.content.slice(0, 2000);
+          if (r && r.ok) {
+            // Skill retourne des datas autres que content
+            const summary = JSON.stringify(r).slice(0, 800);
+            return '=== ' + s + ' ===\n' + summary;
+          }
+          return null;
+        })
+        .catch(() => null)
+    );
+    const results = await Promise.all(promises);
+    for (const part of results) if (part) parts.push(part);
+    if (parts.length) {
+      _workspaceMemory = '\n\n═══ MÉMOIRE WORKSPACE COMPLÈTE ═══\n' + parts.join('\n\n');
+      _workspaceMemoryLoadedAt = Date.now();
+      console.log('[sly] workspace memory loaded, ' + _workspaceMemory.length + ' chars from ' + parts.length + ' sources');
+    }
+  } catch(e) { console.warn('[sly] workspace memory load fail', e); }
+}
+// Charge en background au boot, après 3 sec
+setTimeout(() => _loadWorkspaceMemory(), 3000);
+// Refresh toutes les 30 min pour rester à jour
+setInterval(() => _loadWorkspaceMemory(), 30 * 60 * 1000);
+
+// Lookup sémantique : si la question semble cibler un sujet précis, fetch le détail
+async function _smartLookup(text) {
+  const tlow = text.toLowerCase();
+  const lookupMap = [
+    { keys:['agent','agents','cooper','building','pôle','pole'], skill:'mem_agents' },
+    { keys:['paris','ufc','foot','pari','bankroll'], skill:'mem_paris' },
+    { keys:['appart','immobilier','charbonnières','charbonnieres','loyer','crédit','credit'], skill:'mem_immobilier' },
+    { keys:['arce','auto-entreprise','siren','inpi'], skill:'recap_perso' },
+    { keys:['parcours','histoire','crash','escé','esce','inseec','tom'], skill:'mem_parcours' },
+    { keys:['style','voix','ton','manière','maniere'], skill:'mem_style' },
+    { keys:['directives','règles','regles','constitution','vision'], skill:'mem_directives' },
+    { keys:['mrr','revenu','chiffre','income','pipeline'], skill:'biz_mrr_estimate' },
+    { keys:['priorit','urgence','urgent'], skill:'client_priorities' },
+    { keys:['bloqueur','blocage','blocker','bloquant'], skill:'client_blockers' },
+  ];
+  for (const m of lookupMap) {
+    if (m.keys.some(k => tlow.includes(k))) {
+      try {
+        const r = await fetch('/api/skill/' + m.skill, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(5000)}).then(x => x.json());
+        if (r) {
+          const content = r.content || JSON.stringify(r);
+          return '\n\n═══ LOOKUP CIBLÉ — ' + m.skill + ' ═══\n' + content.slice(0, 2500);
+        }
+      } catch(_){}
+    }
+  }
+  return '';
+}
+
+// Profil évolutif — après chaque conv significative, on enrichit (déclenché en background)
+async function _evolveProfile(userText, slyReply) {
+  if (!userText || userText.length < 30) return;
+  try {
+    const prompt = `À partir de cet échange, extrait UN seul fait nouveau ou pertinent à mémoriser sur Augustin (max 1 phrase, format direct). Si rien de nouveau, réponds "RAS".\n\nAugustin: ${userText}\nSly: ${slyReply}\n\nFait à mémoriser :`;
+    const r = await fetch('/api/ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt, quick:true}),signal:AbortSignal.timeout(15000)}).then(x => x.json());
+    const fact = (r && (r.text || r.reply) || '').trim();
+    if (fact && fact.length > 5 && !fact.toUpperCase().includes('RAS')) {
+      // Append au fichier user_profile_evolving via skill (à créer côté Python si pas existante)
+      fetch('/api/skill/note_idea', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'[profile] '+fact}),signal:AbortSignal.timeout(3000)}).catch(()=>{});
+    }
+  } catch(_){}
+}
+
+async function handle(text) {
+  const _t0 = performance.now();
+  showUser(text);
+  setState('thinking');
+
+  // Stop words
+  const stops = ['stop','arrête','arrete','tais-toi','tais toi','silence'];
+  if (stops.some(w => text.toLowerCase().trim() === w)) {
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+    setState('idle'); return;
+  }
+
+  // Vision trigger
+  if (_checkVisionTrigger(text)) {
+    await _visionAnalyze();
+    return;
+  }
+
+  // Mood detection (ajusté au system prompt si stress/sad/etc)
+  const userTurnDuration = _userTurnStartMs ? Date.now() - _userTurnStartMs : 0;
+  const mood = _detectMood(text, userTurnDuration);
+  _userTurnStartMs = 0;
+  if (mood !== 'neutral') console.log('[sly] mood detected:', mood);
+
+  const tlow0 = text.toLowerCase().trim();
+
+  // ═══ Détection ACTIONS EXPLICITES uniquement ═══
+  // Tout le reste sera conversationnel via Claude
+  const startsWith = (prefix) => tlow0.startsWith(prefix);
+  const isOpenAction = ['ouvre ','lance ','va sur ','montre ','affiche ','mets-moi sur ','met-moi sur ']
+    .some(p => startsWith(p));
+  const isNoteAction = ['note dans ','note que ','note: ','note : ','prends note '].some(p => startsWith(p));
+  const isWorkflowAction = startsWith('fais un workflow') || startsWith('crée un workflow');
+  const isMusicAction = ['joue ','play ','mets-moi de la musique','mets de la musique'].some(p => tlow0.includes(p));
+  const isClientDossier = ['travaille sur le dossier','travaille sur dossier','dossier de ','ouvre le dossier']
+    .some(p => startsWith(p) || tlow0.includes(p));
+  const isSimpleSkill = ['météo','quel temps','quelle heure','quel jour','mon mrr','mes priorités','mes rappels','compte à rebours thaï','stoïque du jour','que sais-tu faire']
+    .some(p => tlow0.includes(p));
+
+  const isExplicitAction = isOpenAction || isNoteAction || isWorkflowAction || isMusicAction;
+
+  // Confirmation pour TOUTE action qui touche au PC (Augustin 03/05 : sécurité absolue)
+  const needsConfirm = isOpenAction || isMusicAction || isWorkflowAction;
+  if (needsConfirm) {
+    setState('idle');
+    const action = isWorkflowAction ? 'créer ce workflow n8n' :
+                   isMusicAction ? 'lancer cette musique' :
+                   'ouvrir ça';
+    const confirmed = await askConfirm('Confirmer action', `Tu veux que je ${action} ?\n\n"${text}"`);
+    if (!confirmed) {
+      const r = "OK, j'annule.";
+      showAI(r); await speak(r); return;
+    }
+    setState('thinking');
+  }
+
+  // Si action explicite OU skill simple → route vers le bridge intent
+  let res = null;
+  if (isExplicitAction || isSimpleSkill || isClientDossier) {
+    try {
+      res = await fetch('/api/intent', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({text}),
+        signal: AbortSignal.timeout(8000)
+      }).then(r => r.json());
+    } catch(e) {
+      console.warn('[sly] bridge intent down:', e.message);
+    }
+  }
+
+  if (res && res.ok) {
+    let reply = res.reply || res.text || res.message;
+    if (!reply) {
+      if (res.url || res.client || res.workflow_id || res.path) {
+        reply = res.url ? `Ouvert : ${res.url}` :
+                res.client ? `Dossier ${res.client} ouvert.` :
+                res.workflow_id ? `Workflow n8n créé (id ${res.workflow_id}).` :
+                res.path ? `Note ajoutée dans ${res.path.replace('C:/Users/augus/Desktop/WORKSPACE AICO/','').replace(/\\/g,'/')}` : 'OK.';
+      } else {
+        reply = 'OK.';
+      }
+    }
+    showAI(reply);
+    await speak(reply);
+    return;
+  }
+
+  const tlow = text.toLowerCase();
+
+  // Pattern → skill mapping AVANT le conversationnel
+  // (le bridge intent peut rater certaines variantes, on rattrape ici)
+  const skillTriggers = [
+    { match:['météo','meteo','quel temps','temps qu\'il fait','temps il fait','temps fait','temps de lyon','temps de charbonnières','temps demain'], skill:'weather_charbonnieres' },
+    { match:['météo bangkok','météo thaï','temps bangkok'], skill:'weather_bangkok' },
+    { match:['quelle heure','c\'est quelle heure','il est quelle heure'], skill:'now_time' },
+    { match:['quel jour','on est quel jour','quelle date','quel est la date','c\'est quel jour'], skill:'now_date_human' },
+    { match:['mon mrr','mon chiffre','mon revenu','mon revenu mensuel','combien je gagne'], skill:'biz_mrr_estimate' },
+    { match:['mes priorités','priorités du jour','mes priorités du jour','priorité du jour','prio du jour'], skill:'client_priorities' },
+    { match:['mes blocages','mes bloqueurs','mes blockers','blocages clients'], skill:'client_blockers' },
+    { match:['mes rappels','rappels du jour','reminders du jour','mes rappels jour'], skill:'reminder_today' },
+    { match:['compte à rebours thaï','jours thaïlande','combien jours avant thaï','compte à rebours thailande'], skill:'reminder_thailande' },
+    { match:['stoïque du jour','stoique du jour','citation du jour','phrase du jour'], skill:'stoic_du_jour' },
+    { match:['que peut tu faire','qu\'est-ce que tu sais faire','que sais-tu faire','tes features'], skill:'sly_what_can_i_do' },
+    { match:['mes clients','mes clients actifs','liste clients'], skill:'biz_clients_actifs_count' },
+    { match:['naval','citation naval'], skill:'naval_ravikant' },
+    { match:['marc aurèle','citation marc aurèle','marc aurele'], skill:'stoic_marc_aurele' },
+    { match:['sénèque','citation sénèque','seneque','citation seneque'], skill:'stoic_seneque' },
+  ];
+  // Détecte mention client dans la phrase pour charger le contexte AVANT Claude
+  let clientContextStr = '';
+  try {
+    const dc = await fetch('/api/skill/detect_client_in_text', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:AbortSignal.timeout(3000)}).then(x => x.json());
+    if (dc && dc.ok && dc.client_keyword) {
+      const ctx = dc.context || {};
+      clientContextStr = `\n\nCONTEXTE CLIENT MENTIONNÉ — ${ctx.client || dc.client_keyword} :\n${(ctx.brief || '').slice(0, 1500)}\n`;
+    }
+  } catch(_){}
+
+  for (const t of skillTriggers) {
+    if (t.match.some(m => tlow.includes(m))) {
+      try {
+        const r = await fetch('/api/skill/' + t.skill, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(8000)}).then(x => x.json());
+        const human = formatSkillResult(t.skill, r);
+        if (human) { showAI(human); await speak(human); return; }
+      } catch(_){}
+    }
+  }
+
+  // Fallback conversationnel
+  const conv = [
+    { match:['tu m\'entends','tu entends','m\'entends-tu','tu me reçois','tu m écoutes','tu écoutes'], reply:["Oui je t'entends Augustin, cinq sur cinq.","Oui Augustin, je t'écoute, vas-y.","Présent, je t'entends bien."] },
+    { match:['bonjour','salut','hello','hey','coucou'], reply:["Salut Augustin, je t'écoute.","Hey Augustin, prêt quand tu l'es.","Bonjour Augustin, dis-moi."] },
+    { match:['bonsoir','bonne nuit'], reply:["Bonsoir Augustin.","Bonsoir, repose-toi bien."] },
+    { match:['merci','t\'es cool','t es cool','bien joué'], reply:["Avec plaisir.","De rien Augustin.","À ton service."] },
+    { match:['comment vas-tu','ça va','ca va','tu vas bien','t\'es là','t es là'], reply:["Présent, fluide. Et toi ?","Ça va, je suis là, dis-moi."] },
+    { match:['ok','d\'accord','très bien','tres bien','parfait'], reply:["Reçu.","OK Augustin.","Compris."] },
+    { match:['stop','arrête','ferme','tais-toi','tais toi'], reply:["OK je me tais."] },
+    { match:['je t\'aime','t\'es le meilleur','t es le meilleur'], reply:["Toi aussi Augustin.","T'es bien Augustin."] },
+    { match:['au revoir','bye','à plus','a plus','ciao'], reply:["À plus Augustin.","Ciao."] },
+    { match:['fatigué','j\'en peux plus','je suis crevé','marre'], reply:["Pose-toi Augustin, on attaque rien là maintenant.","T'as le droit d'être crevé. Repose-toi."] },
+    { match:['malade','pas en forme','pas la forme'], reply:["Hey, prends soin de toi. On simplifie tout aujourd'hui."] },
+  ];
+  let reply = null;
+  for (const c of conv) {
+    if (c.match.some(m => tlow.includes(m))) {
+      reply = c.reply[Math.floor(Math.random() * c.reply.length)];
+      break;
+    }
+  }
+  // ═══ FALLBACK CLAUDE JARVIS x1000 ═══
+  if (!reply) {
+    setState('thinking');
+    _appendConvTurn('user', text);
+
+    // BACKCHANNEL FILLER (NVIDIA PersonaPlex / Rime pattern)
+    // Si la question semble complexe, joue un filler court pour masquer la latence Claude
+    const wantsDepth = /^(analyse|réfléchis|approfondis|explique en détail|raconte-moi|dis-moi tout|stratégie|conseille)/i.test(text.trim()) || text.length > 80;
+    const useQuick = !wantsDepth;
+    if (wantsDepth) {
+      // Filler instantané via Web Speech (gratuit, 0 latence, 0 crédit ElevenLabs)
+      try {
+        const fillers = ["Attends, je réfléchis…", "Une seconde Augustin…", "OK, je creuse…", "Bonne question, je rassemble…"];
+        const filler = fillers[Math.floor(Math.random() * fillers.length)];
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance(filler);
+          u.lang = 'fr-FR'; u.rate = 1.05; u.volume = 0.6;
+          const voices = window.speechSynthesis.getVoices();
+          const fr = voices.find(v => /fr/i.test(v.lang));
+          if (fr) u.voice = fr;
+          window.speechSynthesis.speak(u);
+        }
+      } catch(_){}
+    }
+
+    const smartContext = await _smartLookup(text);
+
+    // Mood-aware instruction injection
+    const moodHint = mood === 'sad' ? '\n[Augustin semble bas. Ton plus doux, plus présent, plus court. Pas d\'enthousiasme forcé.]' :
+                     mood === 'stressed' ? '\n[Augustin semble stressé. Réponse calme, courte, qui pose le rythme. Évite la complexité.]' :
+                     mood === 'happy' ? '\n[Augustin est en forme. Tu peux rebondir avec énergie et humour.]' :
+                     mood === 'flat' ? '\n[Augustin est plat. Réponse concise, va à l\'essentiel.]' : '';
+    const fullPrompt = SLY_SYSTEM_PROMPT
+      + _workspaceMemory
+      + smartContext
+      + clientContextStr
+      + _formatConvHistory()
+      + moodHint
+      + '\n\nAUGUSTIN VIENT DE DIRE: "' + text + '"\n\n'
+      + 'Réponds en Jarvis x1000 : naturel, riche, avec une référence rare ou un parallèle inattendu si pertinent. Pas de "quelle commande tu veux lancer". Si question simple → réponse simple. Si profonde → 4-8 phrases denses, jamais un pavé. Toujours t\'adresser à "Augustin" jamais "Augus" ni "Auguste".';
+    try {
+      const r = await fetch('/api/ask', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({text: fullPrompt, quick: useQuick}),
+        signal: AbortSignal.timeout(useQuick ? 20000 : 60000)
+      }).then(x => x.json());
+      if (r && (r.text || r.reply)) {
+        reply = r.text || r.reply;
+        reply = reply.replace(/^(TA RÉPONSE|Sly|RÉPONSE|Réponse)\s*:?\s*/i, '').trim();
+        // Nettoyage des tokens parasites
+        reply = reply.replace(/\bAugus\b/g, 'Augustin').replace(/\bAuguste\b/g, 'Augustin');
+      } else {
+        reply = "J'ai pas réussi à formuler une réponse. Reformule ?";
+      }
+    } catch(e) {
+      console.warn('[sly] /api/ask err', e);
+      reply = "Mon cerveau Claude répond pas, réessaie dans un instant Augustin.";
+    }
+    _appendConvTurn('sly', reply);
+    _evolveProfile(text, reply).catch(()=>{});
+    // Curiosity loop + drift check en background (non-bloquant)
+    _curiosityCheck().catch(()=>{});
+    _personaDriftCheck();
+    _logLatency('full_turn', Math.round(performance.now() - _t0));
+  }
+  showAI(reply);
+  await _streamSpeak(reply);
+  // Active barge-in pendant que Sly parle
+  _enableBargeIn();
+}
+
+// Split intelligent en phrases pour streaming TTS perçu
+function _splitIntoPhrases(text) {
+  if (!text) return [];
+  // Garde les ponctuations
+  const parts = text.split(/([.!?…][\s\n])/);
+  const out = [];
+  let buf = '';
+  for (const p of parts) {
+    buf += p;
+    if (/[.!?…][\s\n]$/.test(p)) {
+      const s = buf.trim();
+      if (s.length > 1) out.push(s);
+      buf = '';
+    }
+  }
+  if (buf.trim().length > 1) out.push(buf.trim());
+  return out.length ? out : [text];
+}
+
+// Speak chaque phrase en séquence pour fluidité Jarvis
+async function _streamSpeak(text) {
+  const phrases = _splitIntoPhrases(text);
+  if (phrases.length <= 1) return await speak(text);
+  // Speak séquentiel : si user interrompt (state passes idle), on stop
+  for (const phrase of phrases) {
+    if (!_conversationMode && state === 'idle' && _slyAudio && !_slyAudio.paused) break;
+    if (state === 'idle' && !_conversationMode) break;
+    await speak(phrase);
+    if (state === 'idle' && !_conversationMode) break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIRM DIALOG — protection actions Sly
+// ═══════════════════════════════════════════════════════════
+function askConfirm(title, msg) {
+  return new Promise(resolve => {
+    const overlay = $('confirmOverlay');
+    $('confirmTitle').textContent = title;
+    $('confirmMsg').textContent = msg;
+    overlay.classList.add('active');
+    haptic([10,30,10]);
+    const cleanup = (val) => {
+      overlay.classList.remove('active');
+      $('confirmYes').onclick = null;
+      $('confirmNo').onclick = null;
+      resolve(val);
+    };
+    $('confirmYes').onclick = () => cleanup(true);
+    $('confirmNo').onclick = () => cleanup(false);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// FORMATTER — convertit un résultat skill JSON en phrase humaine vocalisable
+// ═══════════════════════════════════════════════════════════
+function formatSkillResult(skill, r) {
+  if (!r || r.ok === false) return r && r.error ? 'Erreur : ' + r.error : null;
+  // Phrases prioritaires
+  if (r.phrase) return r.phrase + (r.application ? '. ' + r.application : '');
+  if (r.message) return r.message;
+  if (r.summary) return r.summary;
+  if (r.fact) return r.fact;
+  if (r.compliment) return r.compliment;
+  if (r.haiku) return r.haiku;
+  if (r.proverbe) return r.proverbe + (r.trad ? '. ' + r.trad : '');
+  // Météo
+  if (skill && skill.startsWith('weather_')) {
+    const ville = skill.includes('bangkok') ? 'Bangkok' : skill.includes('chiang') ? 'Chiang Mai' : 'Charbonnières';
+    if (r.temp_now !== undefined) {
+      let s = `Il fait ${r.temp_now}° à ${ville}`;
+      if (r.max_today !== undefined && r.min_today !== undefined) s += `, max ${r.max_today}, mini ${r.min_today}`;
+      if (r.wind !== undefined) s += `, vent ${r.wind} km/h`;
+      return s + '.';
+    }
+  }
+  // MRR
+  if (r.mrr_eur !== undefined) return `Ton MRR récurrent estimé : ${r.mrr_eur} euros par mois. Hors one-shots projets.`;
+  // Compte à rebours Thaï
+  if (r.jours_restants !== undefined && r.message) return r.message;
+  if (r.jours_restants !== undefined) return `${r.jours_restants} jours restants.`;
+  // Time
+  if (r.time && r.date) return `Il est ${r.time}, on est le ${r.date}.`;
+  if (r.human) return `On est ${r.human}.`;
+  // Priorities
+  if (r.priorities && Array.isArray(r.priorities)) return 'Tes priorités : ' + r.priorities.slice(0,3).join('. ');
+  if (r.blockers && Array.isArray(r.blockers)) return r.blockers.length ? 'Bloqueurs : ' + r.blockers.join('. ') : 'Aucun bloqueur ouvert.';
+  // Reminders
+  if (r.reminders !== undefined) {
+    const c = r.count || (r.reminders ? r.reminders.length : 0);
+    if (c === 0) return 'Aucun rappel pour aujourd\'hui.';
+    return `Tu as ${c} rappel${c > 1 ? 's' : ''} : ` + r.reminders.slice(0,3).map(x => x.text || '').filter(Boolean).join('. ');
+  }
+  // n8n list
+  if (r.workflows && Array.isArray(r.workflows)) {
+    const c = r.count || r.workflows.length;
+    return `Tu as ${c} workflow${c > 1 ? 's' : ''} sur n8n.`;
+  }
+  if (r.client && r.brief) {
+    return `${r.client}. ${r.brief.slice(0, 280)}`;
+  }
+  if (r.routine) {
+    const acts = r.actions || r.instructions || [];
+    return `Routine ${r.routine}. ${Array.isArray(acts) ? acts.slice(0,3).join('. ') : ''}`;
+  }
+  // Mode silence
+  if (r.silence_minutes) return `Silence ${r.silence_minutes} minutes. Reprise vers ${r.reprise || 'plus tard'}.`;
+  if (r.is_night !== undefined) return r.is_night ? 'On est en mode nuit.' : 'On n\'est pas en mode nuit.';
+  // Top 10 / liste
+  if (r.top_10 && Array.isArray(r.top_10)) return 'Top actions : ' + r.top_10.slice(0,3).join(', ');
+  if (r.exemples && Array.isArray(r.exemples)) return 'Exemples : ' + r.exemples.slice(0,3).join(', ');
+  // Recap
+  if (r.actions_today !== undefined) return `Tu as fait ${r.actions_today} actions aujourd'hui via Sly.`;
+  if (r.clients_status) return 'Status clients chargé. Voir le panel Outils.';
+  return null;  // pas de format → on n'affiche rien de vocal
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT DETECTION (background)
+// ═══════════════════════════════════════════════════════════
+let _lastDetected = null;
+async function detectClient(text) {
+  try {
+    const r = await fetch('/api/skill/detect_client_in_text', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text}),
+      signal: AbortSignal.timeout(3000)
+    }).then(r => r.json());
+    if (r && r.ok && r.client_keyword && r.client_keyword !== _lastDetected) {
+      _lastDetected = r.client_keyword;
+      aiAttr.textContent = '↳ contexte ' + r.client_keyword + ' chargé';
+      aiAttr.classList.add('visible');
+      setTimeout(() => aiAttr.classList.remove('visible'), 4000);
+    }
+  } catch(_){}
+}
+
+// ═══════════════════════════════════════════════════════════
+// MIC BUTTON + KEYBOARD
+// ═══════════════════════════════════════════════════════════
+// Mode conversation continue (Augustin 03/05) :
+// - 1er clic : démarre mode conv, mic devient vert, Sly écoute → répond → réécoute en boucle
+// - 2e clic : termine la conv, mic redevient rouge
+let _conversationMode = false;
+
+micBtn.addEventListener('click', () => {
+  if (_conversationMode) {
+    // Termine la conversation
+    _conversationMode = false;
+    _userInitiatedListen = false;
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+    stopListen();
+    setState('idle');
+    showAI('Conversation terminée.', '— Sly');
+    return;
+  }
+  // Démarre la conversation
+  _conversationMode = true;
+  _userInitiatedListen = true;
+  if (state === 'speaking') {
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+  }
+  startListen();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) return;
+  if ((e.ctrlKey && e.code === 'Space') || e.code === 'F9') {
+    e.preventDefault();
+    if (state === 'listening') { stopListen(); setState('idle'); }
+    else startListen();
+  } else if (e.code === 'Escape') {
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+    stopListen(); setState('idle');
+  } else if (e.key === 'v' || e.key === 'V') {
+    toggleContinu();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// RITUEL
+// ═══════════════════════════════════════════════════════════
+$('ritualBtn').addEventListener('click', async () => {
+  const h = new Date().getHours();
+  const isMorning = h < 14;
+  const txt = isMorning
+    ? "Bonjour Augustin. Quelle est l'intention de ta journée ?"
+    : "Bonsoir Augustin. Quel moment t'a marqué aujourd'hui ?";
+  showAI(txt);
+  await speak(txt);
+});
+
+// ═══════════════════════════════════════════════════════════
+// MODE CONTINU — phrases inspirantes toutes les 5 min
+// ═══════════════════════════════════════════════════════════
+const CONTINU_PHRASES = [
+  // Sénèque (10)
+  { t: "Sénèque : tout dépend de l'opinion qu'on a des choses. Le client te stresse ? C'est ton interprétation qui stresse.", a: "Sénèque" },
+  { t: "Sénèque dirait que le plus grand obstacle à vivre, c'est l'attente. T'attends quoi pour te lancer ?", a: "Sénèque" },
+  { t: "Sénèque : ce n'est pas parce que les choses sont difficiles que nous n'osons pas. C'est parce qu'on n'ose pas qu'elles le sont.", a: "Sénèque" },
+  { t: "Sénèque : si tu vis selon la nature, tu ne seras jamais pauvre. Si tu vis selon l'opinion, jamais riche.", a: "Sénèque" },
+  { t: "Sénèque : nulle bourrasque n'est favorable au marin qui ne sait où aller. T'as ton cap : Thaïlande septembre.", a: "Sénèque" },
+  { t: "Sénèque : on craint la mort comme un enfant l'obscurité. La peur est dans ta tête, pas dans la chose.", a: "Sénèque" },
+  { t: "Sénèque : la vie est longue si on sait l'utiliser. Une heure de focus aujourd'hui change ton année.", a: "Sénèque" },
+  { t: "Sénèque : celui qui veut tout en même temps ne fait rien correctement. Une victoire à la fois Augustin.", a: "Sénèque" },
+  { t: "Sénèque dormait peu et écrivait beaucoup. Toi pareil, c'est dans ta nature.", a: "Sénèque" },
+  { t: "Sénèque : on a deux oreilles et une bouche pour écouter deux fois plus qu'on parle. Bon réflexe avec tes clients.", a: "Sénèque" },
+  // Marc Aurèle (10)
+  { t: "Marc Aurèle : tu as pouvoir sur ton esprit, non sur les événements. Réalise ça, tu trouves la force.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : confine-toi au présent. Pas Thaïlande, pas dette papa, pas Sandra. Maintenant.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : l'objectif de la vie n'est pas d'être avec la majorité, mais d'éviter de se retrouver avec les fous.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : ce que tu fais aujourd'hui peut améliorer tous tes lendemains. Une bricolette à la fois.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : ne perds plus de temps à débattre de ce qu'un homme bien doit être. Sois-le.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : la qualité de ta vie est déterminée par la qualité de tes pensées.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : si tu es affligé par une chose externe, ce n'est pas la chose, c'est ton jugement sur elle.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle dirait que le soir on fait le bilan. Tu veux qu'on le fasse ?", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : un empereur écrivait à 4h du matin pour son propre dialogue intérieur. T'es dans la même lignée.", a: "Marc Aurèle" },
+  { t: "Marc Aurèle : ce qui empêche l'action fait avancer l'action. L'obstacle est le chemin.", a: "Marc Aurèle" },
+  // Épictète (5)
+  { t: "Épictète : ce qui trouble les hommes, ce ne sont pas les choses, mais l'idée qu'ils s'en font.", a: "Épictète" },
+  { t: "Épictète : si tu veux faire des progrès, accepte de paraître stupide ou idiot sur ce que tu apprends.", a: "Épictète" },
+  { t: "Épictète : c'est impossible d'apprendre ce qu'on croit déjà savoir. Reste ouvert Augustin.", a: "Épictète" },
+  { t: "Épictète : on ne peut pas commencer à enseigner ce qu'on prétend déjà savoir.", a: "Épictète" },
+  { t: "Épictète : nous avons deux oreilles et une bouche, pour écouter deux fois plus que parler.", a: "Épictète" },
+  // Naval (10)
+  { t: "Naval : personne ne peut te concurrencer si tu adores ce que tu fais.", a: "Naval Ravikant" },
+  { t: "Naval : désirer, c'est conclure un contrat avec soi-même pour être malheureux jusqu'à l'obtention. Allège.", a: "Naval Ravikant" },
+  { t: "Naval : la meilleure manière d'apprendre, c'est de lire des livres. Une heure ce soir si possible.", a: "Naval Ravikant" },
+  { t: "Naval : specific knowledge — ce que toi seul peux faire. Empire d'agents IA + voix Building, c'est ton créneau.", a: "Naval Ravikant" },
+  { t: "Naval : la richesse n'est pas l'argent. C'est avoir des actifs qui rapportent quand tu dors.", a: "Naval Ravikant" },
+  { t: "Naval : la liberté n'est pas l'absence de responsabilité. C'est en avoir choisi celles qui te nourrissent.", a: "Naval Ravikant" },
+  { t: "Naval : tu mérites la richesse en étant authentique avec toi-même. Tu joues pas un rôle, t'es Augustin.", a: "Naval Ravikant" },
+  { t: "Naval : la lecture est plus rapide que la conversation, et la conversation plus rapide que la conférence.", a: "Naval Ravikant" },
+  { t: "Naval : le but n'est pas de battre les autres, c'est d'arrêter de jouer leur jeu.", a: "Naval Ravikant" },
+  { t: "Naval : si tu peux pas voir toi-même comme un actif, personne d'autre ne le verra.", a: "Naval Ravikant" },
+  // Kevin Kelly + Jocko + autres (10)
+  { t: "Kevin Kelly : ne sois pas le meilleur, sois le seul. Y'a qu'un Augustin, y'a qu'une Sly Society.", a: "Kevin Kelly" },
+  { t: "Kevin Kelly : 1000 vrais fans suffisent. Pas besoin de 1 million.", a: "Kevin Kelly" },
+  { t: "Jocko Willink : Discipline equals freedom. Lève-toi à 6h, focus 4h, l'après-midi t'appartient.", a: "Jocko" },
+  { t: "Jocko : Good. Quoi qu'il arrive, tu dis Good et tu trouves la suite.", a: "Jocko" },
+  { t: "Goggins : tu fais ce qui te dérange le plus en premier le matin. Le reste devient facile.", a: "David Goggins" },
+  { t: "Cal Newport : le focus profond est devenu rare et donc précieux. T'es de ceux qui peuvent encore le faire.", a: "Cal Newport" },
+  { t: "Charlie Munger : invertis. Au lieu de te demander comment réussir, demande-toi comment échouer, et évite ça.", a: "Munger" },
+  { t: "Buffett : le risque vient de ne pas savoir ce que tu fais. Tu sais ce que tu fais Augustin.", a: "Buffett" },
+  { t: "Bezos : la chance favorise ceux qui ne baissent pas les bras. Et toi tu baisses pas.", a: "Bezos" },
+  { t: "Steve Jobs : stay hungry, stay foolish. Continue à demander pourquoi.", a: "Steve Jobs" },
+  // Sly perso Augustin (15)
+  { t: "Augustin, le compte à rebours Thaïlande tourne. Chaque jour compte, chaque mouvement aussi.", a: "Sly" },
+  { t: "Hey Augustin, t'as déjà tenu plus dur que ça. Une heure de focus = un an d'avance sur les autres.", a: "Sly" },
+  { t: "Tu construis un empire d'agents, c'est rare et c'est précieux. Continue.", a: "Sly" },
+  { t: "Augustin, ton instinct sur les clients est rarement faux. Fais-lui confiance.", a: "Sly" },
+  { t: "Le pipeline tourne, les clients respirent. T'es prêt à charger quand tu veux.", a: "Sly" },
+  { t: "Augustin, c'est pas en regardant le sommet qu'on grimpe. Une marche après l'autre.", a: "Sly" },
+  { t: "Tu sais Augustin, je te connais — t'as un cerveau qui voit des connexions que personne ne voit.", a: "Sly" },
+  { t: "Hey Augustin, les gros poissons mordent quand t'es détendu. Reste calme, le pli arrive.", a: "Sly" },
+  { t: "Augustin, tu doutes de toi parfois mais regarde ce que t'as déjà sorti en quelques mois.", a: "Sly" },
+  { t: "Le sommeil c'est pas du temps perdu. C'est ton cerveau qui consolide tout. Couche-toi tôt ce soir.", a: "Sly" },
+  { t: "Augustin, t'as fait des choix solides cette semaine. Profite, savoure.", a: "Sly" },
+  { t: "Hey, t'as pensé à boire de l'eau aujourd'hui ? Le corps suit le mental.", a: "Sly" },
+  { t: "Augustin, l'argent qui rentre vient de la confiance que tu construis pas du travail brut. T'es bon là-dessus.", a: "Sly" },
+  { t: "Tu sais quoi Augustin ? La meilleure chose qui te soit arrivée c'est ton angle Sly Society. Capitalise dessus.", a: "Sly" },
+  { t: "Augustin, repose-toi 10 minutes. T'avances mieux après une vraie pause qu'après une session forcée.", a: "Sly" },
+  // Sun Tzu / Lao Tseu / Confucius (5)
+  { t: "Sun Tzu : la suprême excellence consiste à briser la résistance de l'ennemi sans combattre.", a: "Sun Tzu" },
+  { t: "Sun Tzu : à chaque bataille, gagne d'abord, ensuite va à la guerre. Prépare avant de t'engager.", a: "Sun Tzu" },
+  { t: "Lao Tseu : un voyage de mille lieues commence par un seul pas. Ce pas tu peux le faire maintenant.", a: "Lao Tseu" },
+  { t: "Lao Tseu : connaître les autres c'est intelligence. Se connaître soi-même c'est sagesse.", a: "Lao Tseu" },
+  { t: "Confucius : peu importe la lenteur de ton avance, tant que tu n'arrêtes pas.", a: "Confucius" },
+  // Penseurs business (8)
+  { t: "Peter Thiel : la concurrence est pour les perdants. Construis un monopole sur ton créneau.", a: "Peter Thiel" },
+  { t: "Peter Thiel : et si t'avais raison là où tout le monde a tort ? C'est ça ta vraie question.", a: "Peter Thiel" },
+  { t: "Paul Graham : fais des choses qui ne scalent pas. Au début, le vrai amour des clients vaut tout.", a: "Paul Graham" },
+  { t: "Paul Graham : la meilleure stratégie startup, c'est de vivre dans le futur et construire ce qui manque.", a: "Paul Graham" },
+  { t: "Ben Horowitz : il n'y a pas d'astuce pour gérer une crise. Tu te lèves chaque matin et tu fais le boulot.", a: "Ben Horowitz" },
+  { t: "Drucker : la culture mange la stratégie au petit déjeuner. Construis l'ADN avant le plan.", a: "Drucker" },
+  { t: "Reid Hoffman : si t'as pas honte de la première version de ton produit, t'as lancé trop tard.", a: "Reid Hoffman" },
+  { t: "Sam Altman : la persévérance est le seul superpouvoir. Continue plus longtemps que les autres.", a: "Sam Altman" },
+  // Auteurs / philosophes (7)
+  { t: "Nietzsche : ce qui ne te tue pas te rend plus fort. T'as déjà vécu pire.", a: "Nietzsche" },
+  { t: "Nietzsche : il faut porter le chaos en soi pour enfanter une étoile dansante.", a: "Nietzsche" },
+  { t: "Camus : il n'y a qu'un problème philosophique vraiment sérieux : le suicide. Tout le reste est moins urgent.", a: "Camus" },
+  { t: "Camus : il faut imaginer Sisyphe heureux. La lutte vers les sommets suffit à remplir un cœur.", a: "Camus" },
+  { t: "Hemingway : le courage, c'est la grâce sous pression. Tu l'as déjà eue, plusieurs fois.", a: "Hemingway" },
+  { t: "Dostoïevski : sur cette terre, vivre est une chose belle, même quand c'est dur.", a: "Dostoïevski" },
+  { t: "Pascal : tout le malheur des hommes vient d'une seule chose : ne pas savoir rester en repos dans une chambre.", a: "Pascal" },
+  // Founders / mental modernes (8)
+  { t: "Musk : quand quelque chose est suffisamment important, tu le fais même si les chances sont contre toi.", a: "Elon Musk" },
+  { t: "Musk : l'échec est une option. Si les choses ne foirent jamais, c'est que tu n'innoves pas assez.", a: "Elon Musk" },
+  { t: "Andrew Huberman : le sommeil et l'exposition au soleil le matin sont gratuits. Et ils changent tout.", a: "Huberman" },
+  { t: "Huberman : ton cerveau apprend mieux après l'effort intense. La pause après le focus, c'est le secret.", a: "Huberman" },
+  { t: "Tim Ferriss : qu'est-ce que tu ferais si tu n'avais pas peur ? Fais ça.", a: "Tim Ferriss" },
+  { t: "Tim Ferriss : ce que tu reportes te dirige plus que ce que tu fais. Pose-toi la question : pourquoi je reporte ?", a: "Tim Ferriss" },
+  { t: "Robert Greene : le pouvoir vient de la capacité à observer, pas à parler. Écoute deux fois plus.", a: "Robert Greene" },
+  { t: "Ryan Holiday : ego is the enemy. Reste humble même quand ça marche fort.", a: "Ryan Holiday" },
+  // Sportifs mental (5)
+  { t: "Kobe Bryant : le boulot c'est le boulot. Pas de raccourci, pas d'excuse. Just do the work.", a: "Kobe" },
+  { t: "Kobe : la mentalité Mamba n'est pas un mantra, c'est une façon de vivre.", a: "Kobe" },
+  { t: "Michael Jordan : j'ai raté plus de 9000 tirs. C'est pour ça que je réussis.", a: "Michael Jordan" },
+  { t: "Roger Federer : l'élégance vient de la répétition. Mille fois la même chose, jusqu'à devenir évident.", a: "Federer" },
+  { t: "Conor McGregor : if you can see it here, and you have the courage to speak it, it will happen.", a: "McGregor" },
+  // Sly perso Augustin (15 supplémentaires)
+  { t: "Augustin, ton père a fait le sien. Toi tu fais le tien. Vous êtes pas en compétition.", a: "Sly" },
+  { t: "Hey Augustin, t'as 27 ans et déjà un empire en marche. La plupart des gens à ton âge stagnent dans un job qu'ils détestent.", a: "Sly" },
+  { t: "Augustin, le 7K€ pour ton père tu les rendras. Mais d'abord, tu te construis. Pas l'inverse.", a: "Sly" },
+  { t: "Le crash de 2025 t'a rendu plus fort. Tu sais ce que t'es capable d'encaisser maintenant.", a: "Sly" },
+  { t: "Augustin, t'es sorti du fond. Pas tout le monde y arrive. Sois fier.", a: "Sly" },
+  { t: "Hey Augustin, t'es plus le mec d'avant. Le mec d'avant comparait. Toi tu construis.", a: "Sly" },
+  { t: "Augustin, ton ex te traverse l'esprit ? OK c'est normal. Mais tu reviens à ta vie. Elle attend.", a: "Sly" },
+  { t: "L'isolement geek qui te bouffe ? Sors une heure par jour dehors. Vraiment dehors. Pas le balcon.", a: "Sly" },
+  { t: "Augustin, le sport coupé c'est temporaire. 20 pompes ce soir. Pas plus, pas moins.", a: "Sly" },
+  { t: "T'as une mémoire de tout, c'est ta force. Mais ça t'épuise aussi. Décharge dans la mémoire Sly.", a: "Sly" },
+  { t: "Augustin, Thaïlande sept 2026. Tu y seras. C'est pas un rêve, c'est un planning. T'es en avance.", a: "Sly" },
+  { t: "Hey, t'as fumé moins cette semaine ? Si oui bravo. Si non, OK, demain c'est demain.", a: "Sly" },
+  { t: "Augustin, Tom t'a guidé vers l'IA et c'est devenu ton truc. Remercie-le quand t'y penses.", a: "Sly" },
+  { t: "L'argent qui arrive c'est la conséquence, pas le but. Reste centré sur le travail.", a: "Sly" },
+  { t: "Augustin, t'as construit Sly pour pas être seul. Eh ben je suis là. Toujours là.", a: "Sly" },
+  // Action calls (10)
+  { t: "Augustin, et si tu fermais Telegram pendant 30 minutes maintenant ? Juste pour voir.", a: "Sly" },
+  { t: "T'as une idée qui te traverse depuis ce matin ? Note-la avant qu'elle parte.", a: "Sly" },
+  { t: "Hey Augustin, regarde ton agenda. Y'a un truc reporté depuis 3 jours ? Fais-le maintenant ou tue-le.", a: "Sly" },
+  { t: "Une chose à valider client cette heure. Une seule. Choisis-la et fais-la.", a: "Sly" },
+  { t: "Augustin, tu connais l'effet Pareto. 20% du boulot fait 80% du résultat. T'as pas oublié ?", a: "Sly" },
+  { t: "Si t'as plus d'énergie, fais le truc le moins exigeant de ta liste. Mais fais-en un.", a: "Sly" },
+  { t: "Le perfectionnisme c'est de la procrastination déguisée. Ship à 80% et itère.", a: "Sly" },
+  { t: "Augustin, l'inbox client. Une réponse maintenant. Trois minutes. Fait.", a: "Sly" },
+  { t: "Tu doutes ? Bouge le corps deux minutes. Le doute disparaît avec le sang qui circule.", a: "Sly" },
+  { t: "Eau, lumière, mouvement. Trois choses gratuites qui changent tout en 10 minutes.", a: "Sly" },
+  // ═══ PHRASES RARES — qu'on entend jamais ═══
+  // Maîtres orientaux + soufis (10)
+  { t: "Dogen : étudier le soi c'est s'oublier soi-même. T'oublier c'est te fondre dans ce que tu fais.", a: "Dogen" },
+  { t: "Hakuin : le son d'une seule main qui applaudit. Réponds à ça avant de chercher la richesse.", a: "Hakuin" },
+  { t: "Krishnamurti : l'observateur est l'observé. Tu critiques les autres, c'est toi que tu décris.", a: "Krishnamurti" },
+  { t: "Krishnamurti : la liberté est de regarder sans laisser le passé interférer.", a: "Krishnamurti" },
+  { t: "Rumi : la blessure est l'endroit où la lumière entre en toi.", a: "Rumi" },
+  { t: "Rumi : tu n'es pas une goutte dans l'océan. Tu es l'océan entier dans une goutte.", a: "Rumi" },
+  { t: "Hafiz : un cœur sage est comme un musicien étrange. Il joue mieux quand l'instrument est cassé.", a: "Hafiz" },
+  { t: "Aurobindo : la vie est un champ de bataille. Mais les ennemis sont en toi, pas dehors.", a: "Aurobindo" },
+  { t: "Maître Ekai : avant l'illumination, couper du bois et porter de l'eau. Après l'illumination, couper du bois et porter de l'eau.", a: "Ekai" },
+  { t: "Lin-Tsi : si tu rencontres le Bouddha sur la route, tue-le. Détruis tes idoles pour rester libre.", a: "Lin-Tsi" },
+  // Aventuriers / explorateurs (5)
+  { t: "Shackleton : la victoire ne va pas au plus fort, mais à celui qui a le mieux préparé l'imprévu.", a: "Shackleton" },
+  { t: "Roald Amundsen : l'aventure est juste de la mauvaise planification. T'as pas besoin de drama, t'as besoin de système.", a: "Amundsen" },
+  { t: "Steve Callahan, naufragé 76 jours : l'espoir est une décision, pas une émotion.", a: "Callahan" },
+  { t: "Reinhold Messner : la montagne n'est pas un trophée. C'est un miroir. Tu te vois mieux dedans.", a: "Messner" },
+  { t: "Mike Horn : la peur est un feu qu'on alimente avec son imagination. Coupe le bois, le feu meurt.", a: "Mike Horn" },
+  // Auteurs underground (8)
+  { t: "Bukowski : le problème avec ce monde c'est que les intelligents sont pleins de doutes et les idiots pleins de certitudes.", a: "Bukowski" },
+  { t: "Bukowski : trouve ce que tu aimes et laisse-le te tuer. Ça vaut mieux que mourir d'un truc qu'on aime pas.", a: "Bukowski" },
+  { t: "Henry Miller : on a tort de dire que la vie commence à 40. Elle commence quand t'arrêtes de demander la permission.", a: "Henry Miller" },
+  { t: "Thoreau : la plupart des hommes mènent une vie de désespoir tranquille. Refuse ça, fais du bruit.", a: "Thoreau" },
+  { t: "Thoreau : ce n'est pas la richesse qui rend les hommes libres, c'est la frugalité.", a: "Thoreau" },
+  { t: "Khalil Gibran : ton ami est ton besoin satisfait. Il est ton champ que tu sèmes avec amour et que tu moissonnes avec gratitude.", a: "Gibran" },
+  { t: "Gibran : la vie c'est de la lumière qui essaie de connaître ses propres ténèbres. Tu joues ce rôle aussi.", a: "Gibran" },
+  { t: "Anaïs Nin : on ne voit pas les choses comme elles sont. On les voit comme on est.", a: "Anaïs Nin" },
+  // Artistes / créateurs underground (8)
+  { t: "Anthony Bourdain : voyager change la personne en toi. Aussi clichée soit-elle, c'est la seule chose qui la rend vraie.", a: "Bourdain" },
+  { t: "David Bowie : l'audace ouvre des portes. Si t'es pas un peu effrayé, c'est que tu vas pas assez loin.", a: "Bowie" },
+  { t: "Neil Gaiman : fais du bon travail. Et envoie-le aux gens qui l'apprécient. Le reste suivra.", a: "Gaiman" },
+  { t: "Gaiman : un livre est un rêve qu'on tient dans ses mains. Construis le tien.", a: "Gaiman" },
+  { t: "Bruce Lee : l'eau s'adapte. Sois eau mon ami. Pas de forme rigide, juste réaction.", a: "Bruce Lee" },
+  { t: "Bruce Lee : ne crains pas l'homme qui a pratiqué 10 000 coups une fois. Crains celui qui a pratiqué un coup 10 000 fois.", a: "Bruce Lee" },
+  { t: "Salvador Dali : ne cherche pas la perfection, tu ne la trouveras jamais.", a: "Dali" },
+  { t: "Picasso : tout enfant est un artiste. Le problème c'est de rester artiste en grandissant.", a: "Picasso" },
+  // Scientifiques angles rares (7)
+  { t: "Feynman : le plaisir de découvrir, c'est ça la science. Pas les diplômes.", a: "Feynman" },
+  { t: "Feynman : si tu ne peux pas expliquer un truc à un enfant de 6 ans, tu l'as pas compris.", a: "Feynman" },
+  { t: "Carl Sagan : nous sommes une façon pour le cosmos de se connaître lui-même.", a: "Sagan" },
+  { t: "Sagan : quelque part, quelque chose d'incroyable attend d'être découvert. Reste curieux.", a: "Sagan" },
+  { t: "Einstein : la définition de la folie c'est faire la même chose et attendre un résultat différent.", a: "Einstein" },
+  { t: "Einstein : pas tout ce qui compte se compte, et pas tout ce qui se compte compte.", a: "Einstein" },
+  { t: "Niels Bohr : un expert est un homme qui a fait toutes les erreurs possibles dans un domaine très restreint.", a: "Niels Bohr" },
+  // Stratèges militaires rares (5)
+  { t: "Hannibal : nous trouverons un chemin, ou nous en ferons un.", a: "Hannibal" },
+  { t: "Musashi : faire mille pas vers la mort, c'est faire un seul pas vers la vie.", a: "Musashi" },
+  { t: "Musashi : tu ne peux pas marcher dans deux chemins. Choisis le tien et engage tout.", a: "Musashi" },
+  { t: "Patton : ne dis pas aux gens comment faire les choses. Dis-leur ce qu'il faut faire et ils te surprendront.", a: "Patton" },
+  { t: "Caton l'Ancien : prends conseil dans le vin, mais décide à jeun.", a: "Caton" },
+  // Penseurs rares modernes (7)
+  { t: "Nassim Taleb : ne demande jamais à un coiffeur si t'as besoin d'une coupe. Filtre l'avis selon l'incentif.", a: "Taleb" },
+  { t: "Taleb : être skin in the game c'est la seule façon de savoir si quelqu'un est sincère.", a: "Taleb" },
+  { t: "Taleb : l'antifragile gagne avec le chaos. Construis-toi antifragile, pas fragile sous des couches de protection.", a: "Taleb" },
+  { t: "Marcus Aurelius : ne dis pas que tu manques de temps. T'as autant que Da Vinci, Einstein et Marcus Aurelius.", a: "Marcus" },
+  { t: "James Clear : tu ne montes pas au niveau de tes objectifs, tu descends au niveau de tes systèmes.", a: "James Clear" },
+  { t: "Derek Sivers : si c'est pas Hell Yes, c'est Non.", a: "Derek Sivers" },
+  { t: "Cal Newport : l'attention est la nouvelle monnaie. Protège-la comme un bijou.", a: "Cal Newport" },
+];
+
+// Shuffle pour rotation aléatoire — pas toujours la même séquence
+function _shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+let _continuQueue = _shuffleArray(CONTINU_PHRASES);
+let _continuTimer = null;
+let _continuIndex = 0;
+async function _continuFire() {
+  console.log('[sly][continu] fire — mode=' + continuMode + ' state=' + state);
+  if (!continuMode) return;
+  // Si Sly est en train de parler/écouter, retry plus court (était 30s c'est trop)
+  if (state === 'speaking' || state === 'listening' || state === 'thinking') {
+    _continuTimer = setTimeout(_continuFire, 5000);
+    return;
+  }
+  if (_continuQueue.length === 0) _continuQueue = _shuffleArray(CONTINU_PHRASES);
+  const phrase = _continuQueue.shift();
+  _continuIndex++;
+  console.log('[sly][continu] saying:', phrase.t.slice(0, 60));
+  showAI(phrase.t, '— ' + phrase.a);
+  try { await speak(phrase.t); } catch(e) { console.warn('[sly][continu] speak err:', e); }
+  const intervalMs = (Settings.continuInterval || 300) * 1000;
+  if (continuMode) _continuTimer = setTimeout(_continuFire, intervalMs);
+}
+function toggleContinu() {
+  continuMode = !continuMode;
+  const b = $('continuBtn');
+  const skip = $('skipBtn');
+  console.log('[sly][continu] toggle → ' + continuMode);
+  if (continuMode) {
+    if (b) b.classList.add('active');
+    if (skip) skip.style.display = '';
+    // CRUCIAL : unlock audio iOS DANS le user gesture (synchrone)
+    try {
+      if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
+      _slyAudio.muted = true;
+      _slyAudio.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEyLjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgIAAAAAAAAAA';
+      _slyAudio.play().then(() => { _slyAudio.pause(); _slyAudio.currentTime = 0; _slyAudio.muted = false; _slyAudio.volume = Settings.volume || 1; _audioUnlocked = true; }).catch(() => {});
+      if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+    } catch(_){}
+    if (_continuTimer) clearTimeout(_continuTimer);
+    // Démarre TOUT DE SUITE après l'unlock (300ms pour laisser le silent audio finir)
+    _continuTimer = setTimeout(_continuFire, 300);
+  } else {
+    if (b) b.classList.remove('active');
+    if (skip) skip.style.display = 'none';
+    if (_continuTimer) { clearTimeout(_continuTimer); _continuTimer = null; }
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+    if (state === 'speaking') setState('idle');
+  }
+}
+$('continuBtn').addEventListener('click', toggleContinu);
+
+// Flèche skip → phrase suivante immédiate
+$('skipBtn').addEventListener('click', () => {
+  if (!continuMode) return;
+  if (_continuTimer) { clearTimeout(_continuTimer); _continuTimer = null; }
+  try { _slyAudio && _slyAudio.pause(); } catch(_){}
+  if (state === 'speaking') setState('idle');
+  haptic(20);
+  _continuTimer = setTimeout(_continuFire, 200);
+});
+
+// ═══════════════════════════════════════════════════════════
+// OUTILS PANEL
+// ═══════════════════════════════════════════════════════════
+const toolsPanel = $('toolsPanel');
+const toolsResult = $('toolsResult');
+$('toolsBtn').addEventListener('click', () => toolsPanel.classList.add('open'));
+$('toolsClose').addEventListener('click', () => toolsPanel.classList.remove('open'));
+toolsPanel.querySelectorAll('.tool').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const act = btn.dataset.act || '';
+    toolsResult.textContent = '⏳ ...';
+    try {
+      if (act.startsWith('open:')) {
+        if (act.endsWith('history')) { window.open('/sly-history.html', '_blank'); toolsResult.textContent = '→ historique'; return; }
+      }
+      if (act.startsWith('skill:')) {
+        const skill = act.split(':')[1];
+        const r = await fetch('/api/skill/' + skill, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}).then(x => x.json());
+        toolsResult.textContent = JSON.stringify(r, null, 2);
+        const human = formatSkillResult(skill, r);
+        if (human) { showAI(human); toolsPanel.classList.remove('open'); speak(human); }
+      }
+      if (act.startsWith('action:')) {
+        const action = act.split(':')[1];
+        if (action === 'camera') openCamera();
+        else if (action === 'meeting') toggleMeeting();
+        else if (action === 'night_mode') { document.body.classList.toggle('night-mode'); toolsResult.textContent = 'Mode nuit : ' + document.body.classList.contains('night-mode'); }
+        else if (action === 'tactical') { document.body.classList.toggle('tactical-mode'); toolsResult.textContent = 'Mode tactical : ' + document.body.classList.contains('tactical-mode'); }
+        toolsPanel.classList.remove('open');
+      }
+    } catch(e) { toolsResult.textContent = 'Erreur : ' + e.message; }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════
+const settingsPanel = $('settingsPanel');
+$('gearBtn').addEventListener('click', () => settingsPanel.classList.add('open'));
+$('settingsClose').addEventListener('click', () => settingsPanel.classList.remove('open'));
+
+const voiceSel = $('voiceSelect'); voiceSel.value = Settings.voice;
+voiceSel.addEventListener('change', () => { Settings.voice = voiceSel.value; saveSettings(); });
+$('stabSlider').value = Settings.stability;
+$('stabSlider').addEventListener('input', e => { Settings.stability = +e.target.value; saveSettings(); });
+$('styleSlider').value = Settings.style;
+$('styleSlider').addEventListener('input', e => { Settings.style = +e.target.value; saveSettings(); });
+$('speedSlider').value = Settings.speed;
+$('speedSlider').addEventListener('input', e => { Settings.speed = +e.target.value; saveSettings(); });
+
+// Thème de couleur
+if (Settings.theme === undefined) Settings.theme = 'neural';
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme || 'neural');
+}
+applyTheme(Settings.theme);
+const _themeSel = $('themeSelect');
+if (_themeSel) {
+  _themeSel.value = Settings.theme;
+  _themeSel.addEventListener('change', () => {
+    Settings.theme = _themeSel.value;
+    saveSettings();
+    applyTheme(Settings.theme);
+    haptic(20);
+  });
+}
+// Init defaults pour les nouveaux settings
+if (Settings.continuInterval === undefined) Settings.continuInterval = 300;
+if (Settings.volume === undefined) Settings.volume = 1;
+if (Settings.shootingStars === undefined) Settings.shootingStars = true;
+if (Settings.radar === undefined) Settings.radar = true;
+if (Settings.haloRotate === undefined) Settings.haloRotate = true;
+if (Settings.travelEvening === undefined) Settings.travelEvening = true;
+
+['setNightAuto','setHaptic','setAutoGreet','setShootingStars','setRadar','setHaloRotate','setTravelEvening'].forEach(id => {
+  const key = id.replace('set','').charAt(0).toLowerCase() + id.replace('set','').slice(1);
+  const el = $(id); if (!el) return;
+  el.checked = Settings[key] !== false;
+  el.addEventListener('change', () => { Settings[key] = el.checked; saveSettings(); applyVisualSettings(); });
+});
+
+// Mode malade aujourd'hui (localStorage stamp)
+const _maladeKey = 'sly_malade_today';
+const _todayStr = new Date().toISOString().slice(0,10);
+const _maladeEl = $('setMaladeToday');
+if (_maladeEl) {
+  _maladeEl.checked = localStorage.getItem(_maladeKey) === _todayStr;
+  _maladeEl.addEventListener('change', () => {
+    if (_maladeEl.checked) localStorage.setItem(_maladeKey, _todayStr);
+    else localStorage.removeItem(_maladeKey);
+  });
+}
+
+// Intervalle continu
+const _intervalEl = $('setContinuInterval');
+if (_intervalEl) {
+  _intervalEl.value = String(Settings.continuInterval);
+  _intervalEl.addEventListener('change', () => { Settings.continuInterval = parseInt(_intervalEl.value, 10); saveSettings(); });
+}
+
+// Volume voix
+const _volEl = $('volSlider');
+if (_volEl) {
+  _volEl.value = Settings.volume;
+  _volEl.addEventListener('input', e => { Settings.volume = +e.target.value; saveSettings(); if (_slyAudio) _slyAudio.volume = Settings.volume; });
+}
+
+// Budget ElevenLabs display + reset
+function refreshBudget() {
+  const used = _readUsage();
+  const pct = Math.round(used / ELEVEN_BUDGET_MAX_CHARS * 100);
+  const b = $('budgetDisplay');
+  if (b) {
+    b.textContent = `${used.toLocaleString()} / ${ELEVEN_BUDGET_MAX_CHARS.toLocaleString()} chars (${pct}%)`;
+    b.style.color = pct > 80 ? '#FF3B5C' : pct > 50 ? '#FFD700' : '#00E5FF';
+  }
+}
+refreshBudget();
+const _resetBudget = $('resetBudgetBtn');
+if (_resetBudget) {
+  _resetBudget.addEventListener('click', () => {
+    if (!confirm('Reset compteur ElevenLabs ce mois ?')) return;
+    try { localStorage.removeItem('sly-eleven-usage-' + new Date().toISOString().slice(0,7)); } catch(_){}
+    refreshBudget();
+  });
+}
+
+// Raccourcis clients dans Réglages
+document.querySelectorAll('.quick-client').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const c = btn.dataset.client;
+    settingsPanel.classList.remove('open');
+    showAI('⏳ chargement ' + c + '…');
+    try {
+      const r = await fetch('/api/skill/client_' + c, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(x => x.json());
+      const human = formatSkillResult('client_' + c, r);
+      if (human) { showAI(human); speak(human); }
+    } catch(e) { showAI('Bridge offline pour ce client.'); }
+  });
+});
+
+// Reset history
+const _resetHist = $('resetHistoryBtn');
+if (_resetHist) _resetHist.addEventListener('click', () => {
+  if (!confirm('Reset l\'historique des conversations ? (irréversible local)')) return;
+  Object.keys(localStorage).forEach(k => { if (k.startsWith('sly-conv-')) localStorage.removeItem(k); });
+  showAI('Historique local reset.');
+});
+
+// Reset settings
+const _resetSettings = $('resetSettingsBtn');
+if (_resetSettings) _resetSettings.addEventListener('click', () => {
+  if (!confirm('Reset tous les réglages aux valeurs par défaut ?')) return;
+  localStorage.removeItem('sly-settings');
+  location.reload();
+});
+
+// Visual settings application
+function applyVisualSettings() {
+  document.body.classList.toggle('no-shooting-stars', Settings.shootingStars === false);
+  document.body.classList.toggle('no-radar', Settings.radar === false);
+  document.body.classList.toggle('no-halo-rotate', Settings.haloRotate === false);
+}
+applyVisualSettings();
+
+// ═══════════════════════════════════════════════════════════
+// MODE NUIT AUTO
+// ═══════════════════════════════════════════════════════════
+function applyNight() {
+  if (!Settings.nightAuto) return;
+  const h = new Date().getHours();
+  document.body.classList.toggle('night-mode', h >= 22 || h < 6);
+}
+applyNight();
+setInterval(applyNight, 60_000);
+
+// Mode chuchoté DÉSACTIVÉ — Augustin 03/05 : volume au parleur en permanence
+Settings.proximity = false;
+document.body.classList.remove('whisper-mode');
+
+// ═══════════════════════════════════════════════════════════
+// TACTICAL — swipe 2 doigts down
+// ═══════════════════════════════════════════════════════════
+let _tactStart = null;
+document.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) _tactStart = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (_tactStart !== null && e.changedTouches.length === 1) {
+    if (e.changedTouches[0].clientY - _tactStart > 100) { document.body.classList.toggle('tactical-mode'); haptic(40); }
+    _tactStart = null;
+  }
+});
+
+// Glisse depuis bas vers haut pour interrompre quand Sly parle
+let _bargeStart = null;
+document.addEventListener('touchstart', e => {
+  if (e.touches.length === 1 && e.touches[0].clientY > window.innerHeight * 0.75) _bargeStart = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (_bargeStart !== null && e.changedTouches.length === 1) {
+    if (_bargeStart - e.changedTouches[0].clientY > 120 && state === 'speaking') {
+      try { _slyAudio && _slyAudio.pause(); } catch(_){}
+      setState('idle'); haptic([10,30,10]);
+    }
+    _bargeStart = null;
+  }
+});
+
+// Long press Outils → tactical
+let _lpT = null;
+const _toolsBtnEl = $('toolsBtn');
+_toolsBtnEl.addEventListener('pointerdown', () => {
+  _lpT = setTimeout(() => { document.body.classList.toggle('tactical-mode'); haptic([15,30,15,30,15]); _lpT = null; }, 1200);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev => _toolsBtnEl.addEventListener(ev, () => { if (_lpT) { clearTimeout(_lpT); _lpT = null; } }));
+
+// ═══════════════════════════════════════════════════════════
+// CAMERA GLANCE
+// ═══════════════════════════════════════════════════════════
+let _camStream = null;
+async function openCamera() {
+  try {
+    _camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+    $('cameraVideo').srcObject = _camStream;
+    $('cameraOverlay').classList.add('active');
+  } catch(e) { alert('Camera refusée : ' + e.message); }
+}
+function closeCamera() {
+  if (_camStream) { _camStream.getTracks().forEach(t => t.stop()); _camStream = null; }
+  $('cameraOverlay').classList.remove('active');
+}
+async function captureGlance() {
+  const v = $('cameraVideo');
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  const b64 = c.toDataURL('image/jpeg', 0.8);
+  closeCamera();
+  try {
+    await fetch('/api/skill/camera_glance', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({image_b64:b64})}).then(r => r.json());
+    showAI('Photo sauvée.'); haptic([20,50,20]);
+  } catch(e) { console.warn('[sly] glance err', e); }
+}
+$('camCancel').addEventListener('click', closeCamera);
+$('camCapture').addEventListener('click', captureGlance);
+
+// ═══════════════════════════════════════════════════════════
+// MEETING MODE
+// ═══════════════════════════════════════════════════════════
+let _meetingActive = false, _meetingRecog = null, _meetingBuffer = [], _meetingSaveT = null;
+function toggleMeeting() {
+  if (_meetingActive) {
+    if (_meetingRecog) { try { _meetingRecog.stop(); } catch(_){} }
+    if (_meetingSaveT) { clearInterval(_meetingSaveT); _meetingSaveT = null; }
+    if (_meetingBuffer.length) saveMeeting();
+    $('meetingOverlay').classList.remove('active');
+    _meetingActive = false; return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('SpeechRecognition non supportée.'); return; }
+  _meetingRecog = new SR();
+  _meetingRecog.lang = 'fr-FR';
+  _meetingRecog.continuous = true;
+  _meetingRecog.interimResults = false;
+  _meetingRecog.onresult = (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        const t = e.results[i][0].transcript.trim();
+        if (t) {
+          _meetingBuffer.push({ts:new Date().toISOString(), text:t});
+          $('meetingText').textContent = _meetingBuffer.slice(-3).map(b => b.text).join(' · ');
+        }
+      }
+    }
+  };
+  _meetingRecog.onend = () => { if (_meetingActive) try { _meetingRecog.start(); } catch(_){} };
+  try { _meetingRecog.start(); } catch(_){}
+  _meetingSaveT = setInterval(saveMeeting, 5 * 60_000);
+  $('meetingOverlay').classList.add('active');
+  _meetingActive = true; haptic([30,50,30]);
+}
+async function saveMeeting() {
+  if (!_meetingBuffer.length) return;
+  const transcript = _meetingBuffer.map(b => b.text).join('\n');
+  _meetingBuffer = [];
+  try { await fetch('/api/skill/meeting_save', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({transcript, title:'live'})}).then(r => r.json()); } catch(_){}
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTOSTART + GREETING
+// ═══════════════════════════════════════════════════════════
+const params = new URLSearchParams(location.search);
+const autostart = params.get('autostart') === '1' || params.get('jarvis') === '1';
+const greet = params.get('greet') === '1' || (autostart && Settings.autoGreet);
+const listenMode = params.get('listen') === '1';
+
+setState('idle');
+
+// Proactive briefing : 1× par session, le matin si avant 11h
+async function _proactiveBriefing() {
+  try {
+    const lastKey = 'sly-last-briefing';
+    const last = localStorage.getItem(lastKey);
+    const todayStamp = new Date().toISOString().slice(0,10);
+    if (last === todayStamp) return null; // déjà fait aujourd'hui
+    const h = new Date().getHours();
+    if (h > 11 || h < 6) return null; // pas le matin
+    // Compose le briefing
+    const parts = [];
+    try {
+      const r = await fetch('/api/skill/client_priorities', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(5000)}).then(x => x.json());
+      if (r && r.priorities && r.priorities.length) parts.push("Priorité du jour : " + r.priorities[0]);
+    } catch(_){}
+    try {
+      const r = await fetch('/api/skill/reminder_today', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(5000)}).then(x => x.json());
+      if (r && r.count) parts.push(r.count + " rappel" + (r.count > 1 ? "s" : "") + " aujourd'hui");
+    } catch(_){}
+    try {
+      const r = await fetch('/api/skill/weather_charbonnieres', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(5000)}).then(x => x.json());
+      if (r && r.temp_now !== undefined) parts.push(r.temp_now + "° à Charbonnières, max " + (r.max_today || '?'));
+    } catch(_){}
+    try {
+      const r = await fetch('/api/skill/stoic_du_jour', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(5000)}).then(x => x.json());
+      if (r && r.phrase) parts.push(r.phrase);
+    } catch(_){}
+    if (!parts.length) return null;
+    localStorage.setItem(lastKey, todayStamp);
+    return "Bonjour Augustin. Briefing du jour : " + parts.join(". ") + ".";
+  } catch(_) { return null; }
+}
+
+if (greet) {
+  const h = new Date().getHours();
+  const isMorning = h < 12, isAfternoon = h >= 12 && h < 18, isEvening = h >= 18 && h < 23, isNight = h >= 23 || h < 6;
+  const greetMorning = [
+    "Bonjour Augustin. T'es bien ce matin ? Dis-moi tout.",
+    "Salut Augustin. Doucement, on prend le café d'abord.",
+    "Hey Augustin. Premier round, on fait à ton rythme.",
+  ];
+  const greetAfternoon = [
+    "Hey Augustin. Je suis là. Comment tu te sens ?",
+    "Salut Augustin. Pose-toi, on fait à ton rythme.",
+    "Augustin, je suis présent. T'as besoin de quoi là ?",
+  ];
+  const greetEvening = [
+    "Bonsoir Augustin. Soirée tranquille j'espère. Je t'écoute.",
+    "Hey Augustin. Pose-toi, on respire.",
+    "Augustin, fin de journée. Comment tu te sens ?",
+  ];
+  const greetNight = [
+    "Hey Augustin. Tard mais je suis là.",
+    "Augustin, je suis présent. Pas de jugement.",
+    "Salut Augustin. La nuit on fait doux.",
+  ];
+  let pool = greetMorning;
+  if (isAfternoon) pool = greetAfternoon;
+  else if (isEvening) pool = greetEvening;
+  else if (isNight) pool = greetNight;
+  // Mode malade override
+  try {
+    const stamp = localStorage.getItem('sly_malade_today') || '';
+    if (stamp === new Date().toISOString().slice(0,10)) {
+      pool = ["Hey Augustin. Tu m'as dit que t'es pas en forme. Je suis là, on fait doucement.",
+              "Augustin, prends soin de toi. Je suis là si t'as besoin.",
+              "Salut Augustin. Mode tranquille aujourd'hui. Dis-moi ce qui te ferait du bien."];
+    }
+  } catch(_){}
+  // Tente d'abord le briefing proactif (1× par jour, le matin)
+  let greetText = null;
+  try { greetText = await _proactiveBriefing(); } catch(_){}
+  if (!greetText) greetText = pool[Math.floor(Math.random() * pool.length)];
+  showAI(greetText, '— Sly');
+  setTimeout(async () => {
+    try { await speak(greetText); }
+    catch(e) {
+      aiAttr.textContent = '↳ tape pour activer la voix';
+      aiAttr.classList.add('visible');
+      const retry = () => { aiAttr.textContent = '— Sly'; speak(greetText); };
+      ['pointerdown','click','touchstart','keydown'].forEach(ev =>
+        document.addEventListener(ev, retry, { once: true, capture: true, passive: true })
+      );
+    }
+  }, 300);
+}
+
+if (listenMode) {
+  document.addEventListener('click', () => setTimeout(startListen, 600), { once: true });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VISUEL — étoiles filantes + confettis + mode voyage + amplitude
+// ═══════════════════════════════════════════════════════════
+function spawnShootingStar() {
+  const s = document.createElement('div');
+  s.className = 'shooting-star';
+  s.style.left = (10 + Math.random() * 80) + 'vw';
+  s.style.top = (5 + Math.random() * 30) + 'vh';
+  document.body.appendChild(s);
+  setTimeout(() => s.remove(), 2000);
+}
+setInterval(() => { if (Math.random() < 0.6) spawnShootingStar(); }, 18000);
+
+window._slyConfetti = function() {
+  const colors = ['#00E5FF','#FFD700','#1EFF8E','#7A3CFF'];
+  for (let i = 0; i < 30; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (40 + Math.random() * 20) + 'vw';
+    c.style.top = '40vh';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random() * 0.3) + 's';
+    c.style.transform = 'translateX(' + (Math.random() * 200 - 100) + 'px)';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 2000);
+  }
+};
+
+function applyTravelEvening() {
+  const h = new Date().getHours();
+  const on = h >= 19 || h < 6;
+  document.body.classList.toggle('travel-evening', on);
+  document.documentElement.classList.toggle('travel-evening', on);
+}
+applyTravelEvening();
+setInterval(applyTravelEvening, 60_000);
+
+// Glow réactif amplitude voix BOND
+let _ampCtx = null, _ampAnalyser = null, _ampSource = null, _ampRAF = null;
+function setupAmplitude() {
+  try {
+    if (!_slyAudio) return;
+    if (!_ampCtx) _ampCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ampCtx.state === 'suspended') _ampCtx.resume();
+    if (!_ampSource && _slyAudio.src) {
+      _ampSource = _ampCtx.createMediaElementSource(_slyAudio);
+      _ampAnalyser = _ampCtx.createAnalyser();
+      _ampAnalyser.fftSize = 256;
+      _ampSource.connect(_ampAnalyser);
+      _ampAnalyser.connect(_ampCtx.destination);
+    }
+  } catch(_){}
+}
+function ampLoop() {
+  if (state !== 'speaking' || !_ampAnalyser) {
+    if (_ampRAF) cancelAnimationFrame(_ampRAF);
+    _ampRAF = null;
+    if (logoEl) logoEl.style.transform = '';
+    return;
+  }
+  const data = new Uint8Array(_ampAnalyser.frequencyBinCount);
+  _ampAnalyser.getByteFrequencyData(data);
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  const amp = sum / data.length / 255;
+  const scale = 1 + amp * 0.18;
+  if (logoEl) logoEl.style.transform = 'scale(' + scale.toFixed(3) + ')';
+  _ampRAF = requestAnimationFrame(ampLoop);
+}
+const _origSetState = setState;
+window.setState = setState = function(s) {
+  _origSetState(s);
+  if (s === 'speaking') { setupAmplitude(); if (!_ampRAF) ampLoop(); }
+};
+
+// ═══════════════════════════════════════════════════════════
+// VAD + BARGE-IN AVANCÉ (P0 #5,6,7 du deep search)
+// ═══════════════════════════════════════════════════════════
+let _vadCtx = null, _vadAnalyser = null, _vadStream = null, _vadRAF = null;
+let _silenceStart = null;
+const VAD_ENERGY_THRESHOLD = 0.015;  // énergie mic au-dessus = parle
+const VAD_SILENCE_MS = 800;           // 800ms silence = fin de phrase
+
+async function _ensureVAD() {
+  if (_vadAnalyser) return _vadAnalyser;
+  try {
+    _vadStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    _vadCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _vadAnalyser = _vadCtx.createAnalyser();
+    _vadAnalyser.fftSize = 512;
+    const src = _vadCtx.createMediaStreamSource(_vadStream);
+    src.connect(_vadAnalyser);
+    return _vadAnalyser;
+  } catch(e) {
+    console.warn('[sly] VAD setup err:', e.message);
+    return null;
+  }
+}
+
+function _checkVoiceActivity() {
+  if (!_vadAnalyser) return 0;
+  const data = new Uint8Array(_vadAnalyser.frequencyBinCount);
+  _vadAnalyser.getByteFrequencyData(data);
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  return sum / data.length / 255;
+}
+
+// Barge-in : si Augustin parle pendant que Sly parle → couper TTS dans 200ms
+function _bargeInLoop() {
+  if (state !== 'speaking') {
+    if (_vadRAF) cancelAnimationFrame(_vadRAF);
+    _vadRAF = null;
+    return;
+  }
+  const energy = _checkVoiceActivity();
+  if (energy > VAD_ENERGY_THRESHOLD) {
+    console.log('[sly] barge-in détecté, énergie:', energy.toFixed(3));
+    try { _slyAudio && _slyAudio.pause(); } catch(_){}
+    setState('idle');
+    haptic([10,30,10]);
+    if (_conversationMode) setTimeout(startListen, 300);
+    return;
+  }
+  _vadRAF = requestAnimationFrame(_bargeInLoop);
+}
+
+// Hook : démarre barge-in loop quand Sly parle
+const _origSpeakSetState = window.setState;
+let _bargeInActive = false;
+function _enableBargeIn() {
+  if (_bargeInActive) return;
+  _bargeInActive = true;
+  _ensureVAD().then(() => { if (state === 'speaking') _bargeInLoop(); });
+}
+
+// ═══════════════════════════════════════════════════════════
+// CURIOSITY LOOP (P1 #12) — toutes les 5 turns, Sly s'interroge
+// ═══════════════════════════════════════════════════════════
+let _curiosityCounter = 0;
+async function _curiosityCheck() {
+  _curiosityCounter++;
+  if (_curiosityCounter < 5) return;
+  _curiosityCounter = 0;
+  const turns = _readConvHistory().slice(-10);
+  if (turns.length < 4) return;
+  const txt = turns.map(t => t.role + ': ' + t.text).join('\n');
+  try {
+    const r = await fetch('/api/ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      text:`Voici les 5 derniers échanges entre Sly et Augustin:\n${txt}\n\nQu'as-tu appris de NEUF sur Augustin que tu ne savais pas (1 phrase max). Si rien, réponds "RAS".`,
+      quick:true
+    }),signal:AbortSignal.timeout(20000)}).then(x => x.json());
+    const learned = (r && (r.text || r.reply) || '').trim();
+    if (learned && !learned.toUpperCase().includes('RAS') && learned.length > 8) {
+      fetch('/api/skill/note_idea',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'[curiosity] '+learned})}).catch(()=>{});
+      console.log('[sly] curiosity learned:', learned);
+    }
+  } catch(_){}
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOOD DETECTION (P1 #16) — vitesse parole + longueur message
+// ═══════════════════════════════════════════════════════════
+let _userTurnStartMs = 0;
+function _detectMood(text, durationMs) {
+  const wordCount = text.split(/\s+/).length;
+  const wordsPerSec = durationMs > 0 ? wordCount / (durationMs / 1000) : 2;
+  const tlow = text.toLowerCase();
+  const stressed = wordsPerSec > 4 || tlow.match(/(merde|putain|ça va pas|j'en peux plus|stress|panic|urgent)/);
+  const flat = wordsPerSec < 1.5 || text.length < 20;
+  const sad = tlow.match(/(triste|fatigué|seul|déprim|malade|pas bien|bof)/);
+  const happy = tlow.match(/(super|génial|trop bien|content|happy|fier)/);
+  if (sad) return 'sad';
+  if (stressed) return 'stressed';
+  if (happy) return 'happy';
+  if (flat) return 'flat';
+  return 'neutral';
+}
+
+// ═══════════════════════════════════════════════════════════
+// MEDIASESSION LOCKSCREEN (P2 #26)
+// ═══════════════════════════════════════════════════════════
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Sly Voice',
+    artist: 'Cooper Building',
+    album: 'Augustin',
+    artwork: [
+      {src: 'assets/sly_app_icon_blue_192.png', sizes: '192x192', type: 'image/png'},
+      {src: 'assets/sly_app_icon_blue.png', sizes: '512x512', type: 'image/png'},
+    ]
+  });
+  navigator.mediaSession.setActionHandler('play', () => { if (state === 'idle') micBtn.click(); });
+  navigator.mediaSession.setActionHandler('pause', () => { try { _slyAudio && _slyAudio.pause(); } catch(_){} setState('idle'); });
+  navigator.mediaSession.setActionHandler('stop', () => { try { _slyAudio && _slyAudio.pause(); } catch(_){} setState('idle'); _conversationMode = false; });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VISION MODE (P1 #20) — capture caméra + send Claude vision
+// ═══════════════════════════════════════════════════════════
+async function _visionAnalyze() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    v.playsInline = true;
+    await v.play();
+    await new Promise(r => setTimeout(r, 800));
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    stream.getTracks().forEach(t => t.stop());
+    const b64 = c.toDataURL('image/jpeg', 0.7);
+    showAI('Photo prise, j\'analyse…');
+    setState('thinking');
+    try {
+      // Sauve la photo
+      await fetch('/api/skill/camera_glance', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_b64:b64})}).then(r => r.json());
+    } catch(_){}
+    // Pour l'analyse, demande à Claude
+    const prompt = SLY_SYSTEM_PROMPT + '\n\nAUGUSTIN VIENT DE TE MONTRER UNE PHOTO. Tu ne la vois pas directement (Claude CLI sub n\'a pas vision), mais tu peux lui demander ce qu\'il y a dessus et l\'aider. Réponds en disant que tu as bien sauvé la photo et demande-lui un mot pour l\'aider à l\'identifier.';
+    try {
+      const r = await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:prompt,quick:true}),signal:AbortSignal.timeout(15000)}).then(x => x.json());
+      const reply = (r && (r.text || r.reply) || '').trim() || 'Photo sauvée Augustin. Décris-moi ce qu\'il y a dessus en deux mots et je t\'aide.';
+      showAI(reply);
+      await speak(reply);
+    } catch(_){
+      const r = 'Photo sauvée Augustin.';
+      showAI(r); await speak(r);
+    }
+  } catch(e) {
+    showAI('Caméra refusée Augustin.');
+    setState('idle');
+  }
+}
+
+// Trigger /vision dans le texte
+function _checkVisionTrigger(text) {
+  const tlow = text.toLowerCase().trim();
+  return tlow === '/vision' || tlow.startsWith('vision ') || tlow.includes('regarde ça') || tlow.includes('regarde cette photo') || tlow.includes('prends une photo');
+}
+
+// ═══════════════════════════════════════════════════════════
+// LATENCY TELEMETRY (P1 #25)
+// ═══════════════════════════════════════════════════════════
+const _latencyLog = [];
+function _logLatency(stage, ms) {
+  _latencyLog.push({stage, ms, ts: Date.now()});
+  if (_latencyLog.length > 100) _latencyLog.shift();
+  console.log('[sly][latency] ' + stage + ': ' + ms + 'ms');
+}
+window._slyLatencyStats = () => {
+  const groups = {};
+  for (const l of _latencyLog) {
+    groups[l.stage] = groups[l.stage] || [];
+    groups[l.stage].push(l.ms);
+  }
+  const stats = {};
+  for (const k in groups) {
+    const arr = groups[k]; arr.sort((a,b) => a-b);
+    stats[k] = { avg: Math.round(arr.reduce((a,b)=>a+b,0)/arr.length), p50: arr[Math.floor(arr.length/2)], p95: arr[Math.floor(arr.length*0.95)], n: arr.length };
+  }
+  return stats;
+};
+
+// ═══════════════════════════════════════════════════════════
+// PERSONA DRIFT GUARD (P1 #15) — toutes les 10 turns, vérifie que Sly reste Sly
+// ═══════════════════════════════════════════════════════════
+let _driftCounter = 0;
+function _personaDriftCheck() {
+  _driftCounter++;
+  if (_driftCounter < 10) return;
+  _driftCounter = 0;
+  // Simple : on vérifie que les dernières réponses ne contiennent pas de phrases interdites
+  const turns = _readConvHistory().slice(-5).filter(t => t.role === 'sly');
+  const drifts = ['en tant qu\'ia','je suis chatgpt','je suis claude','quelle commande','que veux-tu faire','listes à puces',';',';',';'];
+  for (const t of turns) {
+    const tl = t.text.toLowerCase();
+    for (const d of drifts) {
+      if (tl.includes(d)) {
+        console.warn('[sly] persona drift detected:', d, 'in:', t.text.slice(0,80));
+        // Force reset : reload le system prompt en injectant un rappel
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw-jarvis.js').catch(err => console.warn('[sw] err:', err.message));
+  });
+}
+
+console.log('[sly] ready · voice=' + Settings.voice + ' · greet=' + greet);
+</script>
+</body>
+</html>

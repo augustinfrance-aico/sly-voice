@@ -1,0 +1,19 @@
+{
+  "name": "Sly Voice",
+  "short_name": "Sly",
+  "description": "Assistant vocal personnel d'Augustin — voix BOND, mémoire empire Cooper",
+  "start_url": "./?jarvis=1&autostart=1&greet=1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05070A",
+  "theme_color": "#05070A",
+  "icons": [
+    {"src": "assets/sly_app_icon_blue_192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/sly_app_icon_blue.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "assets/sly_app_icon_blue_maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "categories": ["productivity", "lifestyle", "utilities"],
+  "prefer_related_applications": false
+}
+</content>
