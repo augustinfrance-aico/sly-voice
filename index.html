@@ -761,17 +761,24 @@ async function speak(text) {
     if (!_slyAudio) _slyAudio = new Audio();
     _slyAudio.src = url;
     _slyAudio.volume = (Settings.volume !== undefined) ? Settings.volume : 1;
-    _slyAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      setState('idle');
-      if (_conversationMode) {
-        setTimeout(() => { if (_conversationMode) startListen(); }, 500);
-      }
-    };
-    _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); };
+    // Promise qui résout quand l'audio termine (pas quand il commence)
+    const playbackDone = new Promise((resolve) => {
+      _slyAudio.onended = () => {
+        URL.revokeObjectURL(url);
+        setState('idle');
+        if (_conversationMode) {
+          setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+        }
+        resolve();
+      };
+      _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); resolve(); };
+    });
     try {
       await _slyAudio.play();
       if (window._slyDebug) window._slyDebug('audio.play() OK ✓');
+      // Attend la FIN de la lecture, pas juste le démarrage
+      await playbackDone;
+      return;
     } catch(playErr) {
       console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
       if (window._slyDebug) window._slyDebug('play() REJECTED: ' + playErr.message);
