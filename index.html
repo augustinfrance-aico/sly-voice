@@ -4,19 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>SLY VOICE — Assistant Vocal</title>
-<script>
-// PURGE SW + CACHE — empêche un old HTML cassé d'être servi (Augustin 03/05)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-}
-if (window.caches) {
-  caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
-}
-</script>
-<meta name="theme-color" content="#05070A">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#1F6FFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sly">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/sly_icon_180.png">
 <link rel="manifest" href="manifest.json">
@@ -294,10 +283,6 @@ body.travel-evening::before{box-shadow:inset 0 0 100px 14px rgba(122,60,255,0.12
 </style>
 </head>
 <body>
-
-<script>
-window._slyDebug = function() {};
-</script>
 
 <div id="sly-title">S L Y</div>
 
@@ -694,9 +679,19 @@ function _budgetPct() {
   return Math.round(_readUsage() / ELEVEN_BUDGET_MAX_CHARS * 100);
 }
 
+let _speakLock = false;
 async function speak(text) {
   if (!text) { setState('idle'); return; }
-  if (window._slyDebug) window._slyDebug('speak() called: ' + text.slice(0, 40));
+  // Lock : si déjà en train de parler, attend la fin pour ne pas écraser l'audio
+  if (_speakLock) {
+    let waited = 0;
+    while (_speakLock && waited < 30000) {
+      await new Promise(r => setTimeout(r, 200));
+      waited += 200;
+    }
+  }
+  _speakLock = true;
+  try {
   // Bloqueur 5€/mois : si dépassement, fallback voix navigateur (gratuit)
   if (!_budgetOk(text.length)) {
     console.warn('[sly][BUDGET] cap atteint — fallback Web Speech');
@@ -721,7 +716,6 @@ async function speak(text) {
   const voiceCfg = VOICES[Settings.voice] || VOICES.bond;
   let resp;
   try {
-    if (window._slyDebug) window._slyDebug('fetching ElevenLabs...');
     resp = await fetch(
       'https://api.elevenlabs.io/v1/text-to-speech/' + voiceCfg.id + '/stream?optimize_streaming_latency=4&output_format=mp3_44100_128',
       {
@@ -735,9 +729,7 @@ async function speak(text) {
       }
     );
     if (resp.ok) _addUsage(text.length);
-    if (window._slyDebug) window._slyDebug('ElevenLabs HTTP ' + resp.status);
   } catch(e) {
-    if (window._slyDebug) window._slyDebug('FETCH ERR: ' + e.message);
     console.error('[sly] eleven fetch err:', e.message);
     showAI('Connexion ElevenLabs perdue.');
     setState('idle');
@@ -761,34 +753,25 @@ async function speak(text) {
     if (!_slyAudio) _slyAudio = new Audio();
     _slyAudio.src = url;
     _slyAudio.volume = (Settings.volume !== undefined) ? Settings.volume : 1;
-    // Promise qui résout quand l'audio termine (pas quand il commence)
-    const playbackDone = new Promise((resolve) => {
-      _slyAudio.onended = () => {
-        URL.revokeObjectURL(url);
-        setState('idle');
-        if (_conversationMode) {
-          setTimeout(() => { if (_conversationMode) startListen(); }, 500);
-        }
-        resolve();
-      };
-      _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); resolve(); };
-    });
+    _slyAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      setState('idle');
+      if (_conversationMode) {
+        setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+      }
+    };
+    _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); };
     try {
       await _slyAudio.play();
-      if (window._slyDebug) window._slyDebug('audio.play() OK ✓');
-      // Attend la FIN de la lecture, pas juste le démarrage
-      await playbackDone;
-      return;
     } catch(playErr) {
       console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
-      if (window._slyDebug) window._slyDebug('play() REJECTED: ' + playErr.message);
       URL.revokeObjectURL(url);
+      // Fallback Web Speech (gratuit, marche partout)
       try {
         const u = new SpeechSynthesisUtterance(text);
         u.lang = 'fr-FR'; u.rate = 1.0;
         u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
         window.speechSynthesis.speak(u);
-        if (window._slyDebug) window._slyDebug('Web Speech fallback launched');
       } catch(_) { setState('idle'); }
       return;
     }
@@ -796,6 +779,7 @@ async function speak(text) {
     console.error('[sly] play err', e.message);
     setState('idle');
   }
+  } finally { _speakLock = false; }
 }
 
 function flashError() {
@@ -1098,42 +1082,7 @@ async function handle(text) {
   const isSimpleSkill = ['météo','quel temps','quelle heure','quel jour','mon mrr','mes priorités','mes rappels','compte à rebours thaï','stoïque du jour','que sais-tu faire']
     .some(p => tlow0.includes(p));
 
-  // Note action enrichie : "prends note", "Sly note ça", "note ça"
-  const isNoteSimple = /^(sly\s+)?(prends?\s+note|notes?\s+(ça|ca|moi)|note\s*[:,])/i.test(tlow0) ||
-                       tlow0.startsWith('prends note') || tlow0.startsWith('note dans sly notes');
   const isExplicitAction = isOpenAction || isNoteAction || isWorkflowAction || isMusicAction;
-
-  // Note dans Sly notes — gérer ici, pas via intent (skip confirmation)
-  if (isNoteSimple) {
-    let noteContent = text;
-    // Strip le trigger
-    const stripTriggers = ['sly prends note', 'prends note de', 'prends note', 'sly note ça', 'sly note ca', 'note ça', 'note ca', 'note moi', 'note:', 'note :'];
-    for (const tr of stripTriggers) {
-      if (tlow0.startsWith(tr)) { noteContent = text.substring(tr.length).trim().replace(/^[:,.]\s*/, ''); break; }
-    }
-    if (noteContent.length < 3) noteContent = text;
-    try {
-      const r = await fetch('/api/skill/note_today', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'[Sly notes] '+noteContent}),signal:AbortSignal.timeout(8000)}).then(x => x.json());
-      // Mirror local au cas où
-      try {
-        const arr = JSON.parse(localStorage.getItem('sly_notes_local') || '[]');
-        arr.push({ts:new Date().toISOString(), text:noteContent});
-        localStorage.setItem('sly_notes_local', JSON.stringify(arr.slice(-200)));
-      } catch(_){}
-      const path = r && r.path ? r.path.replace(/.*WORKSPACE AICO[\\/]/i,'').replace(/\\/g,'/') : 'memory/notes';
-      const reply = `Note prise Augustin. Sauvée dans ${path}.`;
-      showAI(reply); await speak(reply); return;
-    } catch(e) {
-      // Bridge down → mirror local seulement
-      try {
-        const arr = JSON.parse(localStorage.getItem('sly_notes_local') || '[]');
-        arr.push({ts:new Date().toISOString(), text:noteContent});
-        localStorage.setItem('sly_notes_local', JSON.stringify(arr.slice(-200)));
-      } catch(_){}
-      const reply = "Note gardée en local Augustin (bridge offline).";
-      showAI(reply); await speak(reply); return;
-    }
-  }
 
   // Confirmation pour TOUTE action qui touche au PC (Augustin 03/05 : sécurité absolue)
   const needsConfirm = isOpenAction || isMusicAction || isWorkflowAction;
@@ -1333,10 +1282,17 @@ function _splitIntoPhrases(text) {
   return out.length ? out : [text];
 }
 
-// Augustin 03/05 : speak en UN SEUL appel pour éviter coupures
-// (le streaming par phrase coupait l'audio précédent en écrasant src)
+// Speak chaque phrase en séquence pour fluidité Jarvis
 async function _streamSpeak(text) {
-  return await speak(text);
+  const phrases = _splitIntoPhrases(text);
+  if (phrases.length <= 1) return await speak(text);
+  // Speak séquentiel : si user interrompt (state passes idle), on stop
+  for (const phrase of phrases) {
+    if (!_conversationMode && state === 'idle' && _slyAudio && !_slyAudio.paused) break;
+    if (state === 'idle' && !_conversationMode) break;
+    await speak(phrase);
+    if (state === 'idle' && !_conversationMode) break;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1453,12 +1409,6 @@ async function detectClient(text) {
 let _conversationMode = false;
 
 micBtn.addEventListener('click', () => {
-  console.log('[sly][mic] clicked, state=' + state + ' conv=' + _conversationMode);
-  // Unlock audio iOS DANS le user gesture (au cas où)
-  try {
-    if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
-    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-  } catch(_){}
   if (_conversationMode) {
     // Termine la conversation
     _conversationMode = false;
@@ -1496,22 +1446,13 @@ document.addEventListener('keydown', (e) => {
 // RITUEL
 // ═══════════════════════════════════════════════════════════
 $('ritualBtn').addEventListener('click', async () => {
-  console.log('[sly][rituel] clicked');
-  // Unlock audio iOS DANS le user gesture
-  try {
-    if (!_slyAudio) { _slyAudio = new Audio(); _slyAudio.preload = 'auto'; }
-    _slyAudio.muted = true;
-    _slyAudio.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjEyLjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgIAAAAAAAAAA';
-    _slyAudio.play().then(() => { _slyAudio.pause(); _slyAudio.currentTime = 0; _slyAudio.muted = false; _audioUnlocked = true; }).catch(()=>{});
-    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-  } catch(_){}
   const h = new Date().getHours();
   const isMorning = h < 14;
   const txt = isMorning
     ? "Bonjour Augustin. Quelle est l'intention de ta journée ?"
     : "Bonsoir Augustin. Quel moment t'a marqué aujourd'hui ?";
   showAI(txt);
-  setTimeout(() => speak(txt), 200);
+  await speak(txt);
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -1723,7 +1664,6 @@ let _continuTimer = null;
 let _continuIndex = 0;
 async function _continuFire() {
   console.log('[sly][continu] fire — mode=' + continuMode + ' state=' + state);
-  if (window._slyDebug) window._slyDebug('_continuFire called, state=' + state);
   if (!continuMode) return;
   // Si Sly est en train de parler/écouter, retry plus court (était 30s c'est trop)
   if (state === 'speaking' || state === 'listening' || state === 'thinking') {
@@ -1744,7 +1684,6 @@ function toggleContinu() {
   const b = $('continuBtn');
   const skip = $('skipBtn');
   console.log('[sly][continu] toggle → ' + continuMode);
-  if (window._slyDebug) window._slyDebug('CONTINU clicked, mode=' + continuMode);
   if (continuMode) {
     if (b) b.classList.add('active');
     if (skip) skip.style.display = '';
@@ -2111,7 +2050,7 @@ async function _proactiveBriefing() {
   } catch(_) { return null; }
 }
 
-if (greet) (async () => {
+if (greet) {
   const h = new Date().getHours();
   const isMorning = h < 12, isAfternoon = h >= 12 && h < 18, isEvening = h >= 18 && h < 23, isNight = h >= 23 || h < 6;
   const greetMorning = [
@@ -2151,25 +2090,19 @@ if (greet) (async () => {
   let greetText = null;
   try { greetText = await _proactiveBriefing(); } catch(_){}
   if (!greetText) greetText = pool[Math.floor(Math.random() * pool.length)];
-  showAI(greetText, '↳ tape n\'importe où pour activer la voix');
-  // En mobile iOS, le 1er audio nécessite un user gesture. On attend ce gesture AVANT speak.
-  let _greetSpoken = false;
-  const _doGreetSpeak = () => {
-    if (_greetSpoken) return;
-    _greetSpoken = true;
-    aiAttr.textContent = '— Sly';
-    speak(greetText);
-  };
-  // Tente quand même direct (au cas où ça marche)
-  setTimeout(() => {
-    if (_greetSpoken) return;
-    speak(greetText).then(() => { _greetSpoken = true; aiAttr.textContent = '— Sly'; }).catch(() => {});
-  }, 400);
-  // Retry sur le 1er user gesture
-  ['pointerdown','click','touchstart','keydown'].forEach(ev =>
-    document.addEventListener(ev, _doGreetSpeak, { once: true, capture: true, passive: true })
-  );
-})();
+  showAI(greetText, '— Sly');
+  setTimeout(async () => {
+    try { await speak(greetText); }
+    catch(e) {
+      aiAttr.textContent = '↳ tape pour activer la voix';
+      aiAttr.classList.add('visible');
+      const retry = () => { aiAttr.textContent = '— Sly'; speak(greetText); };
+      ['pointerdown','click','touchstart','keydown'].forEach(ev =>
+        document.addEventListener(ev, retry, { once: true, capture: true, passive: true })
+      );
+    }
+  }, 300);
+}
 
 if (listenMode) {
   document.addEventListener('click', () => setTimeout(startListen, 600), { once: true });
