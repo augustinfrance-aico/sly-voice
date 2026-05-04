@@ -1333,17 +1333,10 @@ function _splitIntoPhrases(text) {
   return out.length ? out : [text];
 }
 
-// Speak chaque phrase en séquence pour fluidité Jarvis
+// Augustin 03/05 : speak en UN SEUL appel pour éviter coupures
+// (le streaming par phrase coupait l'audio précédent en écrasant src)
 async function _streamSpeak(text) {
-  const phrases = _splitIntoPhrases(text);
-  if (phrases.length <= 1) return await speak(text);
-  // Speak séquentiel : si user interrompt (state passes idle), on stop
-  for (const phrase of phrases) {
-    if (!_conversationMode && state === 'idle' && _slyAudio && !_slyAudio.paused) break;
-    if (state === 'idle' && !_conversationMode) break;
-    await speak(phrase);
-    if (state === 'idle' && !_conversationMode) break;
-  }
+  return await speak(text);
 }
 
 // ═══════════════════════════════════════════════════════════
