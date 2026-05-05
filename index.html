@@ -564,6 +564,7 @@ let state = 'idle';
 let listening = false;
 let continuMode = false;
 let _userInitiatedListen = false;
+var _speakLock = false;
 let recog = null;
 let _slyAudio = null;
 let _audioUnlocked = false;
@@ -679,7 +680,6 @@ function _budgetPct() {
   return Math.round(_readUsage() / ELEVEN_BUDGET_MAX_CHARS * 100);
 }
 
-let _speakLock = false;
 async function speak(text) {
   if (!text) { setState('idle'); return; }
   // Lock : si déjà en train de parler, attend la fin pour ne pas écraser l'audio
@@ -2400,7 +2400,7 @@ function _personaDriftCheck() {
 // Service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw-jarvis.js').catch(err => console.warn('[sw] err:', err.message));
+    /* Pas de SW — il créait un cache qui bloquait les updates */
   });
 }
 
