@@ -769,28 +769,39 @@ async function speak(text) {
     if (!_slyAudio) _slyAudio = new Audio();
     _slyAudio.src = url;
     _slyAudio.volume = (Settings.volume !== undefined) ? Settings.volume : 1;
-    _slyAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      setState('idle');
-      if (_conversationMode) {
-        setTimeout(() => { if (_conversationMode) startListen(); }, 500);
-      }
-    };
-    _slyAudio.onerror = (e) => { console.error('[sly] audio err', e); URL.revokeObjectURL(url); setState('idle'); };
-    try {
-      await _slyAudio.play();
-    } catch(playErr) {
-      console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
-      URL.revokeObjectURL(url);
-      // Fallback Web Speech (gratuit, marche partout)
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'fr-FR'; u.rate = 1.0;
-        u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
-        window.speechSynthesis.speak(u);
-      } catch(_) { setState('idle'); }
-      return;
-    }
+    // FIX 06/05/2026 : await la fin RÉELLE de la lecture (onended), pas seulement le démarrage de play().
+    // Sans ça, _speakLock se libère trop tôt et la phrase suivante écrase l'audio en cours.
+    await new Promise((resolve) => {
+      _slyAudio.onended = () => {
+        URL.revokeObjectURL(url);
+        setState('idle');
+        if (_conversationMode) {
+          setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+        }
+        resolve();
+      };
+      _slyAudio.onerror = (e) => {
+        console.error('[sly] audio err', e);
+        URL.revokeObjectURL(url);
+        setState('idle');
+        resolve();
+      };
+      _slyAudio.play().catch(playErr => {
+        console.error('[sly] play() rejected — autoplay block iOS?', playErr.message);
+        URL.revokeObjectURL(url);
+        // Fallback Web Speech (gratuit, marche partout)
+        try {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'fr-FR'; u.rate = 1.0;
+          u.onend = () => {
+            setState('idle');
+            if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+            resolve();
+          };
+          window.speechSynthesis.speak(u);
+        } catch(_) { setState('idle'); resolve(); }
+      });
+    });
   } catch(e) {
     console.error('[sly] play err', e.message);
     setState('idle');
