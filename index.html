@@ -3,8 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta http-equiv="cache-control" content="no-cache,no-store,must-revalidate">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="0">
 <title>SLY VOICE — Assistant Vocal</title>
-<meta name="theme-color" content="#1F6FFF">
+<meta name="theme-color" content="#05070A">
+<script>
+// AGGRESSIVE CACHE PURGE 06/05/2026 — force fresh version sur iPhone PWA
+(function(){
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+  } catch(_){}
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sly">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/sly_icon_180.png">
@@ -703,19 +719,33 @@ async function speak(text) {
   if (!_budgetOk(text.length)) {
     console.warn('[sly][BUDGET] cap atteint — fallback Web Speech');
     showAI('⚠ Budget ElevenLabs 5€/mois atteint. Voix navigateur en attendant le mois prochain.\n\n' + text);
-    try {
-      if ('speechSynthesis' in window) {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'fr-FR'; u.rate = 1.0; u.pitch = 0.95;
-        const voices = window.speechSynthesis.getVoices();
-        const fr = voices.find(v => /fr/i.test(v.lang) && /male|homme|antoine|thomas/i.test(v.name)) || voices.find(v => /fr/i.test(v.lang));
-        if (fr) u.voice = fr;
-        u.onend = () => { setState('idle'); if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500); };
-        window.speechSynthesis.speak(u);
-      } else {
-        setState('idle');
-      }
-    } catch(_) { setState('idle'); }
+    // Wrap dans Promise + timeout safety pour ne pas relâcher _speakLock avant fin réelle
+    const estDur = Math.max(8000, text.length * 80) + 5000;
+    await new Promise((resolve) => {
+      let resolved = false;
+      const safe = () => { if (!resolved) { resolved = true; resolve(); } };
+      const t = setTimeout(safe, estDur);
+      try {
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'fr-FR'; u.rate = 1.0; u.pitch = 0.95;
+          const voices = window.speechSynthesis.getVoices();
+          const fr = voices.find(v => /fr/i.test(v.lang) && /male|homme|antoine|thomas/i.test(v.name)) || voices.find(v => /fr/i.test(v.lang));
+          if (fr) u.voice = fr;
+          u.onend = () => {
+            clearTimeout(t);
+            setState('idle');
+            if (_conversationMode) setTimeout(() => { if (_conversationMode) startListen(); }, 500);
+            safe();
+          };
+          window.speechSynthesis.speak(u);
+        } else {
+          clearTimeout(t);
+          setState('idle');
+          safe();
+        }
+      } catch(_) { clearTimeout(t); setState('idle'); safe(); }
+    });
     return;
   }
   setState('speaking');
